@@ -1,0 +1,50 @@
+[
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\fragment_main.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\fragment_player.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_player.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\item_catalog_block.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\item_catalog_block.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-mergeDebugResources-57:/layout/view_player_controls.xml",
+        "source": "com.vkz.player.app-main-60:/layout/view_player_controls.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\fragment_search.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_search.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\activity_login.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\activity_login.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\item_track.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\item_track.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\fragment_settings.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_settings.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\fragment_mix.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_mix.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\view_player_controls.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\view_player_controls.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\item_track_horizontal.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\item_track_horizontal.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-mergeDebugResources-57:\\layout\\activity_main.xml",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\activity_main.xml"
+    }
+]

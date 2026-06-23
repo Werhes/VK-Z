@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent">#FF0077FF</color>
+    <color name="background">#FF121212</color>
+    <color name="divider">#FF333333</color>
+    <color name="error">#FFCF6679</color>
+    <color name="nav_icon_color">#FF707070</color>
+    <color name="nav_text_color">#FF707070</color>
+    <color name="surface">#FF1E1E1E</color>
+    <color name="surface_variant">#FF2C2C2C</color>
+    <color name="text_hint">#FF707070</color>
+    <color name="text_primary">#FFE0E0E0</color>
+    <color name="text_secondary">#FFA0A0A0</color>
+    <color name="vk_blue">#FF0077FF</color>
+    <color name="vk_blue_dark">#FF0055CC</color>
+    <color name="vk_blue_light">#FF3399FF</color>
+    <string name="add_to_favorites">Add to favorites</string>
+    <string name="app_description">Music player for VK</string>
+    <string name="app_name">VK Z</string>
+    <string name="clear_search">Clear search</string>
+    <string name="cover_art">Cover art</string>
+    <string name="error_auth">Authentication failed. Please login again.</string>
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_unknown">Something went wrong</string>
+    <string name="favorite">Favorite</string>
+    <string name="favorites_added">Added to favorites</string>
+    <string name="favorites_removed">Removed from favorites</string>
+    <string name="loading">Loading your music…</string>
+    <string name="loading_mix">Preparing your mix…</string>
+    <string name="login_description">Sign in with your VK account</string>
+    <string name="login_title">VK Z Login</string>
+    <string name="mix_empty">No recommendations yet</string>
+    <string name="more_options">More options</string>
+    <string name="nav_home">My Music</string>
+    <string name="nav_mix">Mix</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_settings">Settings</string>
+    <string name="next">Next</string>
+    <string name="no_results">No results found</string>
+    <string name="no_tracks">No tracks yet</string>
+    <string name="notification_channel_desc">Music playback controls</string>
+    <string name="notification_channel_name">Playback</string>
+    <string name="play_pause">Play/Pause</string>
+    <string name="previous">Previous</string>
+    <string name="pull_to_refresh">Pull down to refresh</string>
+    <string name="remove_from_favorites">Remove from favorites</string>
+    <string name="repeat">Repeat</string>
+    <string name="search_hint">Search tracks, artists…</string>
+    <string name="settings_account_section">Account</string>
+    <string name="settings_app_info">VK Z v1.0 — Music player for VKontakte</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_logout_confirm_message">Are you sure you want to log out? You will need to sign in again to access your music.</string>
+    <string name="settings_logout_confirm_title">Confirm logout</string>
+    <string name="settings_mix_description">Customize which content blocks appear on your Mix page</string>
+    <string name="settings_mix_section">VK Mix Settings</string>
+    <string name="settings_show_new_releases">New Releases</string>
+    <string name="settings_show_new_releases_desc">Latest new music releases</string>
+    <string name="settings_show_playlists">Playlists</string>
+    <string name="settings_show_playlists_desc">Curated playlists and collections</string>
+    <string name="settings_show_popular">Popular</string>
+    <string name="settings_show_popular_desc">Popular and trending tracks</string>
+    <string name="settings_show_recommendations">Recommendations</string>
+    <string name="settings_show_recommendations_desc">Personalized track recommendations</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_tracks_per_block">Tracks per block</string>
+    <string name="shuffle">Shuffle</string>
+    <string name="unknown_artist">Unknown artist</string>
+    <string name="unknown_track">Unknown track</string>
+    <style name="Theme.VKZ" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        
+        <item name="colorPrimary">@color/vk_blue</item>
+        <item name="colorPrimaryVariant">@color/vk_blue_dark</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+
+        
+        <item name="colorSecondary">@color/vk_blue_light</item>
+        <item name="colorSecondaryVariant">@color/vk_blue</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+
+        
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+
+        
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="android:navigationBarColor">@color/background</item>
+
+        
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+
+        
+        <item name="android:windowBackground">@color/background</item>
+
+        
+        <item name="bottomNavigationStyle">@style/Widget.MaterialComponents.BottomNavigationView.Colored</item>
+    </style>
+    <style name="Theme.VKZ.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/background</item>
+    </style>
+</resources>
