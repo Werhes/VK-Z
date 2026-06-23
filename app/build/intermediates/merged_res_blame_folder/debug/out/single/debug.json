@@ -1,0 +1,158 @@
+[
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_repeat_one.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_repeat_one.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_view_player_controls.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\view_player_controls.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_bg_seekbar.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\bg_seekbar.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_fragment_player.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_player.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_bg_seekbar_thumb.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\bg_seekbar_thumb.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_fragment_main.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_pause.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_pause.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_fragment_search.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_search.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_repeat.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_repeat.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_notification.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_notification.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_fragment_settings.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_settings.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_shuffle.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_shuffle.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_settings.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_settings.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_favorite_outline.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_favorite_outline.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_play.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_play.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_home.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_home.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_item_track_horizontal.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\item_track_horizontal.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_skip_previous.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_skip_previous.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_bg_playing_indicator.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\bg_playing_indicator.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_more_vert.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_more_vert.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_fragment_mix.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\fragment_mix.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-merged_res-58:/layout_view_player_controls.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/view_player_controls.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_music_note.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_music_note.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_item_track.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\item_track.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_activity_login.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\activity_login.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_favorite.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_favorite.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_launcher_background.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_launcher_background.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\menu_bottom_nav_menu.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\menu\\bottom_nav_menu.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_skip_next.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_skip_next.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_mix.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_mix.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_close.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_close.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\layout_item_catalog_block.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\layout\\item_catalog_block.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_bg_play_button.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\bg_play_button.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_bg_search_input.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\bg_search_input.xml"
+    },
+    {
+        "merged": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-merged_res-58:\\drawable_ic_search.xml.flat",
+        "source": "C:\\Users\\Werhes\\.gradle\\daemon\\8.5\\com.vkz.player.app-main-60:\\drawable\\ic_search.xml"
+    }
+]

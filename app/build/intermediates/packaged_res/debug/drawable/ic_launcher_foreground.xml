@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Background circle -->
+    <path
+        android:fillColor="#1E1E1E"
+        android:pathData="M54,54m-50,0a50,50 0,1 1,100 0a50,50 0,1 1,-100 0" />
+    <!-- VK blue circle accent -->
+    <path
+        android:fillColor="#0077FF"
+        android:pathData="M54,54m-46,0a46,46 0,1 1,92 0a46,46 0,1 1,-92 0" />
+    <!-- Inner dark circle -->
+    <path
+        android:fillColor="#1E1E1E"
+        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+    <!-- V letter (left) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,38 L40,38 L46,54 L52,38 L58,38 L50,58 L50,70 L44,70 L44,58 Z" />
+    <!-- K letter (right) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,38 L66,38 L66,52 L72,46 L80,46 L72,54 L80,70 L72,70 L66,60 L66,70 L60,70 Z" />
+    <!-- Z letter (bottom right, smaller, purple accent) -->
+    <path
+        android:fillColor="#9C87B9"
+        android:pathData="M62,62 L78,62 L78,66 L66,66 L66,68 L78,68 L78,72 L62,72 L62,68 L74,68 L74,66 L62,66 Z" />
+    <!-- Music note accent -->
+    <path
+        android:fillColor="#C278B6"
+        android:pathData="M44,72 C44,72 48,72 50,70 L50,58 L56,56 L56,60 L52,62 L52,70 C52,72 50,74 46,74 C42,74 40,72 40,70 C40,68 42,66 44,66 C45,66 46,66 46,67 L46,72 Z" />
+</vector>

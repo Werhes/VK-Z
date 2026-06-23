@@ -1,0 +1,154 @@
+[
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_item_catalog_block.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/item_catalog_block.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_settings.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_settings.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_favorite_outline.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_favorite_outline.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_skip_next.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_skip_next.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_pause.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_pause.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_fragment_mix.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/fragment_mix.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_home.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_home.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_activity_main.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_notification.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_notification.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_fragment_settings.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/fragment_settings.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_mix.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_mix.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_repeat.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_repeat.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_close.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_close.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_repeat_one.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_repeat_one.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_music_note.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_music_note.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.vkz.player.app-main-60:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_search.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_search.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/menu_bottom_nav_menu.xml.flat",
+        "source": "com.vkz.player.app-main-60:/menu/bottom_nav_menu.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_skip_previous.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_skip_previous.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_fragment_search.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/fragment_search.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_bg_play_button.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/bg_play_button.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_bg_seekbar_thumb.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/bg_seekbar_thumb.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_item_track.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/item_track.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_more_vert.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_more_vert.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_fragment_player.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/fragment_player.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_activity_login.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/activity_login.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_bg_playing_indicator.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/bg_playing_indicator.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_shuffle.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_shuffle.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_bg_seekbar.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/bg_seekbar.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_fragment_main.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/fragment_main.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_favorite.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_favorite.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_view_player_controls.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/view_player_controls.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/layout_item_track_horizontal.xml.flat",
+        "source": "com.vkz.player.app-main-60:/layout/item_track_horizontal.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.vkz.player.app-main-60:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_ic_play.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/ic_play.xml"
+    },
+    {
+        "merged": "com.vkz.player.app-debug-58:/drawable_bg_search_input.xml.flat",
+        "source": "com.vkz.player.app-main-60:/drawable/bg_search_input.xml"
+    }
+]

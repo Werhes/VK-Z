@@ -1,0 +1,197 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.vkz.player"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="34" />
+10
+11    <!-- Permissions -->
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:6:5-67
+12-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:6:22-64
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+13-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:7:5-79
+13-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:7:22-76
+14    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+14-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:8:5-77
+14-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:8:22-74
+15    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+15-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:9:5-92
+15-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:9:22-89
+16    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+16-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:10:5-77
+16-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:10:22-74
+17    <uses-permission android:name="android.permission.WAKE_LOCK" />
+17-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:11:5-68
+17-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:11:22-65
+18
+19    <permission
+19-->[androidx.core:core:1.12.0] C:\Users\Werhes\.gradle\caches\transforms-3\0d4ffc60e85a7c7f9fbeb27599893adc\transformed\core-1.12.0\AndroidManifest.xml:22:5-24:47
+20        android:name="com.vkz.player.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+20-->[androidx.core:core:1.12.0] C:\Users\Werhes\.gradle\caches\transforms-3\0d4ffc60e85a7c7f9fbeb27599893adc\transformed\core-1.12.0\AndroidManifest.xml:23:9-81
+21        android:protectionLevel="signature" />
+21-->[androidx.core:core:1.12.0] C:\Users\Werhes\.gradle\caches\transforms-3\0d4ffc60e85a7c7f9fbeb27599893adc\transformed\core-1.12.0\AndroidManifest.xml:24:9-44
+22
+23    <uses-permission android:name="com.vkz.player.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+23-->[androidx.core:core:1.12.0] C:\Users\Werhes\.gradle\caches\transforms-3\0d4ffc60e85a7c7f9fbeb27599893adc\transformed\core-1.12.0\AndroidManifest.xml:26:5-97
+23-->[androidx.core:core:1.12.0] C:\Users\Werhes\.gradle\caches\transforms-3\0d4ffc60e85a7c7f9fbeb27599893adc\transformed\core-1.12.0\AndroidManifest.xml:26:22-94
+24
+25    <application
+25-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:13:5-48:19
+26        android:name="com.vkz.player.VkZApplication"
+26-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:14:9-39
+27        android:allowBackup="true"
+27-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:15:9-35
+28        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+28-->[androidx.core:core:1.12.0] C:\Users\Werhes\.gradle\caches\transforms-3\0d4ffc60e85a7c7f9fbeb27599893adc\transformed\core-1.12.0\AndroidManifest.xml:28:18-86
+29        android:debuggable="true"
+30        android:extractNativeLibs="false"
+31        android:icon="@mipmap/ic_launcher"
+31-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:16:9-43
+32        android:label="@string/app_name"
+32-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:17:9-41
+33        android:roundIcon="@mipmap/ic_launcher_round"
+33-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:18:9-54
+34        android:supportsRtl="true"
+34-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:19:9-35
+35        android:theme="@style/Theme.VKZ"
+35-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:20:9-41
+36        android:usesCleartextTraffic="false" >
+36-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:21:9-45
+37
+38        <!-- Main Activity -->
+39        <activity
+39-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:25:9-33:20
+40            android:name="com.vkz.player.MainActivity"
+40-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:26:13-41
+41            android:exported="true"
+41-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:27:13-36
+42            android:theme="@style/Theme.VKZ" >
+42-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:28:13-45
+43            <intent-filter>
+43-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:29:13-32:29
+44                <action android:name="android.intent.action.MAIN" />
+44-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:30:17-69
+44-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:30:25-66
+45
+46                <category android:name="android.intent.category.LAUNCHER" />
+46-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:31:17-77
+46-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:31:27-74
+47            </intent-filter>
+48        </activity>
+49
+50        <!-- Login Activity -->
+51        <activity
+51-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:36:9-40:58
+52            android:name="com.vkz.player.LoginActivity"
+52-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:37:13-42
+53            android:exported="false"
+53-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:38:13-37
+54            android:theme="@style/Theme.VKZ"
+54-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:39:13-45
+55            android:windowSoftInputMode="adjustResize" />
+55-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:40:13-55
+56
+57        <!-- Audio Playback Service -->
+58        <service
+58-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:43:9-46:61
+59            android:name="com.vkz.player.service.AudioPlaybackService"
+59-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:44:13-57
+60            android:exported="false"
+60-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:45:13-37
+61            android:foregroundServiceType="mediaPlayback" />
+61-->C:\Users\Werhes\Documents\VK  Z\app\src\main\AndroidManifest.xml:46:13-58
+62
+63        <provider
+63-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Werhes\.gradle\caches\transforms-3\0ddb9c379c67fcbab722e7078f3a6911\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+64            android:name="androidx.startup.InitializationProvider"
+64-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Werhes\.gradle\caches\transforms-3\0ddb9c379c67fcbab722e7078f3a6911\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
+65            android:authorities="com.vkz.player.androidx-startup"
+65-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Werhes\.gradle\caches\transforms-3\0ddb9c379c67fcbab722e7078f3a6911\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
+66            android:exported="false" >
+66-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Werhes\.gradle\caches\transforms-3\0ddb9c379c67fcbab722e7078f3a6911\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
+67            <meta-data
+67-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Werhes\.gradle\caches\transforms-3\0ddb9c379c67fcbab722e7078f3a6911\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+68                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+68-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Werhes\.gradle\caches\transforms-3\0ddb9c379c67fcbab722e7078f3a6911\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
+69                android:value="androidx.startup" />
+69-->[androidx.emoji2:emoji2:1.2.0] C:\Users\Werhes\.gradle\caches\transforms-3\0ddb9c379c67fcbab722e7078f3a6911\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
+70            <meta-data
+70-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\Werhes\.gradle\caches\transforms-3\f85ac06fc2d55a22491880112208a206\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:29:13-31:52
+71                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+71-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\Werhes\.gradle\caches\transforms-3\f85ac06fc2d55a22491880112208a206\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:30:17-78
+72                android:value="androidx.startup" />
+72-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\Werhes\.gradle\caches\transforms-3\f85ac06fc2d55a22491880112208a206\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:31:17-49
+73            <meta-data
+73-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:29:13-31:52
+74                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+74-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:30:17-85
+75                android:value="androidx.startup" />
+75-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:31:17-49
+76        </provider>
+77
+78        <uses-library
+78-->[androidx.window:window:1.0.0] C:\Users\Werhes\.gradle\caches\transforms-3\620aa41e339451f79b654dd8ef9b5dcd\transformed\window-1.0.0\AndroidManifest.xml:25:9-27:40
+79            android:name="androidx.window.extensions"
+79-->[androidx.window:window:1.0.0] C:\Users\Werhes\.gradle\caches\transforms-3\620aa41e339451f79b654dd8ef9b5dcd\transformed\window-1.0.0\AndroidManifest.xml:26:13-54
+80            android:required="false" />
+80-->[androidx.window:window:1.0.0] C:\Users\Werhes\.gradle\caches\transforms-3\620aa41e339451f79b654dd8ef9b5dcd\transformed\window-1.0.0\AndroidManifest.xml:27:13-37
+81        <uses-library
+81-->[androidx.window:window:1.0.0] C:\Users\Werhes\.gradle\caches\transforms-3\620aa41e339451f79b654dd8ef9b5dcd\transformed\window-1.0.0\AndroidManifest.xml:28:9-30:40
+82            android:name="androidx.window.sidecar"
+82-->[androidx.window:window:1.0.0] C:\Users\Werhes\.gradle\caches\transforms-3\620aa41e339451f79b654dd8ef9b5dcd\transformed\window-1.0.0\AndroidManifest.xml:29:13-51
+83            android:required="false" />
+83-->[androidx.window:window:1.0.0] C:\Users\Werhes\.gradle\caches\transforms-3\620aa41e339451f79b654dd8ef9b5dcd\transformed\window-1.0.0\AndroidManifest.xml:30:13-37
+84
+85        <service
+85-->[androidx.room:room-runtime:2.6.1] C:\Users\Werhes\.gradle\caches\transforms-3\935a938376750e3028b2f50a39c0a4e0\transformed\room-runtime-2.6.1\AndroidManifest.xml:24:9-28:63
+86            android:name="androidx.room.MultiInstanceInvalidationService"
+86-->[androidx.room:room-runtime:2.6.1] C:\Users\Werhes\.gradle\caches\transforms-3\935a938376750e3028b2f50a39c0a4e0\transformed\room-runtime-2.6.1\AndroidManifest.xml:25:13-74
+87            android:directBootAware="true"
+87-->[androidx.room:room-runtime:2.6.1] C:\Users\Werhes\.gradle\caches\transforms-3\935a938376750e3028b2f50a39c0a4e0\transformed\room-runtime-2.6.1\AndroidManifest.xml:26:13-43
+88            android:exported="false" />
+88-->[androidx.room:room-runtime:2.6.1] C:\Users\Werhes\.gradle\caches\transforms-3\935a938376750e3028b2f50a39c0a4e0\transformed\room-runtime-2.6.1\AndroidManifest.xml:27:13-37
+89
+90        <receiver
+90-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
+91            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+91-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
+92            android:directBootAware="false"
+92-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
+93            android:enabled="true"
+93-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
+94            android:exported="true"
+94-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
+95            android:permission="android.permission.DUMP" >
+95-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
+96            <intent-filter>
+96-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
+97                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+97-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
+97-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
+98            </intent-filter>
+99            <intent-filter>
+99-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
+100                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+100-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
+100-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
+101            </intent-filter>
+102            <intent-filter>
+102-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
+103                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+103-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
+103-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
+104            </intent-filter>
+105            <intent-filter>
+105-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
+106                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+106-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
+106-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Werhes\.gradle\caches\transforms-3\96880c6b062bc21963958e8d695bed5e\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
+107            </intent-filter>
+108        </receiver>
+109    </application>
+110
+111</manifest>
