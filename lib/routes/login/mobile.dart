@@ -1,22 +1,25 @@
 import "package:flutter/material.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
-import "package:flutter_inappwebview/flutter_inappwebview.dart";
 import "package:gap/gap.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:styled_text/styled_text.dart";
+import "package:url_launcher/url_launcher.dart";
 
 import "../../api/vk/consts.dart";
 import "../../consts.dart";
 import "../../provider/l18n.dart";
 import "../../utils.dart";
-import "../../widgets/dialogs.dart";
-import "../../widgets/page_route_builders.dart";
+import "../../widgets/loading_button.dart";
+import "../../widgets/shortcuts_propagator.dart";
 import "../login.dart";
-import "desktop.dart";
 
 /// Часть Route'а [LoginRoute], показываемая при запуске на мобильных платформах.
 ///
-/// Данный Route нельзя показывать на Desktop-платформах, поскольку inappwebview, используемый для рендеринга страницы, не поддерживается на Desktop-платформах.
+/// Вместо WebView использует открытие ссылки в браузере и ручной ввод токена.
 class MobileLoginWidget extends HookConsumerWidget {
+  /// Текст, который нужно ввести в поле для ввода токена, чтобы войти в демо-режим.
+  static const String demoText = "DEMO";
+
   /// Указывает, что вместо авторизации с Kate Mobile (главный токен) будет проводиться вторичная авторизация от имени VK Admin.
   ///
   /// Используется при подключении рекомендаций ВКонтакте.
@@ -29,37 +32,36 @@ class MobileLoginWidget extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // InAppWebView, используемый для рендеринга Web-страницы, не поддерживается на Desktop-платформах.
-    if (!isMobile) {
-      throw Exception("MobileLoginWidget can only work on mobile platforms.");
-    }
-
-    final isWebViewShown = useState(true);
-
     final l18n = ref.watch(l18nProvider);
 
-    if (!isWebViewShown.value) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Иконка.
-            Icon(
-              Icons.check_circle,
-              color: ColorScheme.of(context).primary,
-            ),
-            const Gap(12),
+    final controller = useTextEditingController();
+    useValueListenable(controller);
 
-            // Текст "Авторизация успешна".
-            Text(
-              l18n.login_success_auth,
-              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                    color: ColorScheme.of(context).primary,
-                  ),
-            ),
-          ],
-        ),
+    final String? extractedToken = useMemoized(
+      () => extractAccessToken(controller.text),
+      [controller.text],
+    );
+    final bool isDemo = useMemoized(
+      () => controller.text == demoText,
+      [controller.text],
+    );
+
+    final isLoading = useState(false);
+
+    Future<void> onAuthPressed() async {
+      isLoading.value = true;
+
+      await tryAuthorize(
+        ref,
+        context,
+        extractedToken!,
+        useAlternateAuth,
       );
+      isLoading.value = false;
+    }
+
+    void onDemoPressed() {
+      tryDemoAuth(ref);
     }
 
     return Scaffold(
@@ -67,73 +69,111 @@ class MobileLoginWidget extends HookConsumerWidget {
         title: const Text(
           appName,
         ),
-        actions: [
-          PopupMenuButton(
-            itemBuilder: (BuildContext context) {
-              return [
-                PopupMenuItem(
-                  value: true,
-                  onTap: () => Navigator.push(
-                    context,
-                    Material3PageRoute(
-                      builder: (context) => DesktopLoginWidget(
-                        useAlternateAuth: useAlternateAuth,
+      ),
+      resizeToAvoidBottomInset: false,
+      body: Center(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: SizedBox(
+              width: 500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Текст "Авторизация".
+                  Text(
+                    useAlternateAuth
+                        ? l18n.login_connect_recommendations_title
+                        : l18n.login_title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const Gap(12),
+
+                  // Описание авторизации.
+                  StyledText(
+                    text: useAlternateAuth
+                        ? l18n.login_connect_recommendations_desc
+                        : l18n.login_desktop_desc,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                    tags: {
+                      "bold": StyledTextTag(
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      "link": StyledTextActionTag(
+                        (String? text, Map<String?, String?> attrs) {
+                          launchUrl(
+                            Uri.parse(
+                              useAlternateAuth
+                                  ? vkMusicRecommendationsOAuthURL
+                                  : vkMainOAuthURL,
+                            ),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        },
+                        style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                              color: ColorScheme.of(context).primary,
+                            ),
+                      ),
+                    },
+                  ),
+                  const Gap(8),
+
+                  // Поле для ввода токена.
+                  ShortcutsPropagator(
+                    child: TextField(
+                      controller: controller,
+                      enabled: !isLoading.value,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(
+                          Icons.key,
+                        ),
+                        hintText:
+                            "https://oauth.vk.com/blank.html#access_token=vk1...",
                       ),
                     ),
                   ),
-                  child: Text(
-                    l18n.login_mobile_alternate_auth,
+                  const Gap(36),
+
+                  // Кнопки для продолжения авторизации.
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      spacing: 8,
+                      alignment: WrapAlignment.end,
+                      children: [
+                        // Кнопка для входа в демо-режим.
+                        if (isDemo)
+                          FilledButton.icon(
+                            icon: const Icon(
+                              Icons.play_arrow,
+                            ),
+                            label: const Text(
+                              "DEMO",
+                            ),
+                            onPressed: onDemoPressed,
+                          ),
+
+                        // Кнопка "авторизоваться".
+                        LoadingIconButton(
+                          icon: const Icon(
+                            Icons.arrow_forward_ios,
+                          ),
+                          label: Text(
+                            l18n.login_authorize,
+                          ),
+                          onPressed:
+                              extractedToken != null ? onAuthPressed : null,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ];
-            },
-          ),
-        ],
-      ),
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        maintainBottomViewPadding: true,
-        child: InAppWebView(
-          initialUrlRequest: URLRequest(
-            url: WebUri(
-              useAlternateAuth
-                  ? vkMusicRecommendationsOAuthURL
-                  : vkMainOAuthURL,
+                ],
+              ),
             ),
           ),
-          onLoadStop: (
-            InAppWebViewController controller,
-            WebUri? action,
-          ) async {
-            if (action == null) return;
-
-            // Убеждаемся, что новая страница является blank-страницей, которая передаётся только после окончания авторизации.
-            String url = action.toString();
-            if (!url.startsWith("https://oauth.vk.com/blank.html")) return;
-
-            // Извлекаем access-токен из URL.
-            String? token = extractAccessToken(url);
-            if (token == null) {
-              isWebViewShown.value = false;
-
-              showErrorDialog(
-                context,
-                description: l18n.login_no_token_error,
-              );
-
-              return;
-            }
-
-            // Пытаемся авторизоваться по токену.
-            isWebViewShown.value = false;
-
-            await tryAuthorize(
-              ref,
-              context,
-              token,
-              useAlternateAuth,
-            );
-          },
         ),
       ),
     );
