@@ -24,6 +24,7 @@ class VkApiService {
     _userId = null;
   }
 
+  /// Direct API call (may fail for audio.* methods due to VK restrictions)
   Future<Map<String, dynamic>> _call({
     required String method,
     Map<String, String>? params,
@@ -59,16 +60,50 @@ class VkApiService {
     return data;
   }
 
-  // Get user's audio catalog - the main working endpoint
+  /// Execute VKScript via the execute API method.
+  /// This bypasses the "Unknown method passed" restriction on audio.* methods.
+  Future<Map<String, dynamic>> _execute(String code) async {
+    if (_accessToken == null) {
+      throw Exception('Not authorized');
+    }
+
+    final queryParams = <String, String>{
+      'access_token': _accessToken!,
+      'v': VkConfig.apiVersion,
+      'code': code,
+    };
+
+    final uri = Uri.parse('${VkConfig.apiBaseUrl}/execute')
+        .replace(queryParameters: queryParams);
+
+    debugPrint('VK API execute call');
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    // Check for API errors
+    if (data.containsKey('error')) {
+      final error = data['error'] as Map<String, dynamic>;
+      throw Exception('VK API Error ${error['error_code']}: ${error['error_msg']}');
+    }
+
+    return data;
+  }
+
+  // Get user's audio catalog via execute (bypasses audio.* restrictions)
   Future<Map<String, dynamic>> getCatalog({
     String? userId,
   }) async {
-    final params = <String, String>{
-      'extended': '1',
-    };
-    if (userId != null) params['user_id'] = userId;
+    String code = 'return API.audio.getCatalog({"extended": 1});';
+    if (userId != null) {
+      code = 'return API.audio.getCatalog({"extended": 1, "user_id": "$userId"});';
+    }
 
-    final data = await _call(method: 'audio.getCatalog', params: params);
+    final data = await _execute(code);
     
     // Debug: log the catalog structure
     try {
@@ -109,14 +144,12 @@ class VkApiService {
     int count = 50,
   }) async {
     try {
-      // Try the direct method first
-      final params = <String, String>{
-        'offset': offset.toString(),
-        'count': count.toString(),
-      };
-      if (ownerId != null) params['owner_id'] = ownerId.toString();
-
-      final data = await _call(method: 'audio.get', params: params);
+      // Try via execute
+      String code = 'return API.audio.get({"offset": $offset, "count": $count});';
+      if (ownerId != null) {
+        code = 'return API.audio.get({"owner_id": $ownerId, "offset": $offset, "count": $count});';
+      }
+      final data = await _execute(code);
       final items = data['response']?['items'] as List? ?? [];
       if (items.isNotEmpty) {
         return items
@@ -125,7 +158,7 @@ class VkApiService {
             .toList();
       }
     } catch (e) {
-      debugPrint('audio.get failed, falling back to catalog: $e');
+      debugPrint('audio.get via execute failed, falling back to catalog: $e');
     }
 
     // Fallback: extract tracks from catalog
@@ -271,14 +304,12 @@ class VkApiService {
     int count = 50,
   }) async {
     try {
-      // Try the direct method first
-      final params = <String, String>{
-        'offset': offset.toString(),
-        'count': count.toString(),
-      };
-      if (ownerId != null) params['owner_id'] = ownerId.toString();
-
-      final data = await _call(method: 'audio.getPlaylists', params: params);
+      // Try via execute
+      String code = 'return API.audio.getPlaylists({"offset": $offset, "count": $count});';
+      if (ownerId != null) {
+        code = 'return API.audio.getPlaylists({"owner_id": $ownerId, "offset": $offset, "count": $count});';
+      }
+      final data = await _execute(code);
       final items = data['response']?['items'] as List? ?? [];
       if (items.isNotEmpty) {
         return items
@@ -287,7 +318,7 @@ class VkApiService {
             .toList();
       }
     } catch (e) {
-      debugPrint('audio.getPlaylists failed, falling back to catalog: $e');
+      debugPrint('audio.getPlaylists via execute failed, falling back to catalog: $e');
     }
 
     // Fallback: extract playlists from catalog
@@ -342,19 +373,44 @@ class VkApiService {
     int offset = 0,
     int count = 100,
   }) async {
-    final params = <String, String>{
-      'playlist_id': playlistId.toString(),
-      'owner_id': ownerId.toString(),
-      'offset': offset.toString(),
-      'count': count.toString(),
-    };
+    try {
+      // Try via execute
+      final code = 'return API.audio.getPlaylistTracks({'
+          '"playlist_id": $playlistId, '
+          '"owner_id": $ownerId, '
+          '"offset": $offset, '
+          '"count": $count'
+          '});';
+      final data = await _execute(code);
+      final items = data['response']?['items'] as List? ?? [];
+      if (items.isNotEmpty) {
+        return items
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Track.fromJson(e))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('audio.getPlaylistTracks via execute failed: $e');
+    }
 
-    final data = await _call(method: 'audio.getPlaylistTracks', params: params);
-    final items = data['response']?['items'] as List? ?? [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Track.fromJson(e))
-        .toList();
+    // Fallback: try direct call
+    try {
+      final params = <String, String>{
+        'playlist_id': playlistId.toString(),
+        'owner_id': ownerId.toString(),
+        'offset': offset.toString(),
+        'count': count.toString(),
+      };
+      final data = await _call(method: 'audio.getPlaylistTracks', params: params);
+      final items = data['response']?['items'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (e) {
+      debugPrint('audio.getPlaylistTracks direct call also failed: $e');
+      return [];
+    }
   }
 
   // Search tracks
@@ -364,39 +420,15 @@ class VkApiService {
     int count = 50,
   }) async {
     try {
-      final params = <String, String>{
-        'q': query,
-        'offset': offset.toString(),
-        'count': count.toString(),
-        'autocomplete': '1',
-        'sort': '2',
-      };
-
-      final data = await _call(method: 'audio.search', params: params);
-      final items = data['response']?['items'] as List? ?? [];
-      return items
-          .whereType<Map<String, dynamic>>()
-          .map((e) => Track.fromJson(e))
-          .toList();
-    } catch (e) {
-      debugPrint('Search failed: $e');
-      return [];
-    }
-  }
-
-  // Get recommended tracks
-  Future<List<Track>> getRecommendations({
-    int offset = 0,
-    int count = 50,
-  }) async {
-    try {
-      // Try direct method
-      final params = <String, String>{
-        'offset': offset.toString(),
-        'count': count.toString(),
-      };
-
-      final data = await _call(method: 'audio.getRecommendations', params: params);
+      // Try via execute
+      final code = 'return API.audio.search({'
+          '"q": "${_escapeVkScript(query)}", '
+          '"offset": $offset, '
+          '"count": $count, '
+          '"autocomplete": 1, '
+          '"sort": 2'
+          '});';
+      final data = await _execute(code);
       final items = data['response']?['items'] as List? ?? [];
       if (items.isNotEmpty) {
         return items
@@ -405,7 +437,58 @@ class VkApiService {
             .toList();
       }
     } catch (e) {
-      debugPrint('audio.getRecommendations failed, falling back to catalog: $e');
+      debugPrint('audio.search via execute failed, trying direct call: $e');
+    }
+
+    // Fallback: try direct call
+    try {
+      final params = <String, String>{
+        'q': query,
+        'offset': offset.toString(),
+        'count': count.toString(),
+        'autocomplete': '1',
+        'sort': '2',
+      };
+      final data = await _call(method: 'audio.search', params: params);
+      final items = data['response']?['items'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (e) {
+      debugPrint('audio.search direct call also failed: $e');
+      return [];
+    }
+  }
+
+  /// Escape a string for use in VKScript
+  String _escapeVkScript(String s) {
+    return s
+        .replaceAll('\\', '\\\\')
+        .replaceAll('"', '\\"')
+        .replaceAll('\n', '\\n')
+        .replaceAll('\r', '\\r')
+        .replaceAll('\t', '\\t');
+  }
+
+  // Get recommended tracks
+  Future<List<Track>> getRecommendations({
+    int offset = 0,
+    int count = 50,
+  }) async {
+    try {
+      // Try via execute
+      final code = 'return API.audio.getRecommendations({"offset": $offset, "count": $count});';
+      final data = await _execute(code);
+      final items = data['response']?['items'] as List? ?? [];
+      if (items.isNotEmpty) {
+        return items
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Track.fromJson(e))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('audio.getRecommendations via execute failed, falling back to catalog: $e');
     }
 
     // Fallback: extract recommendations from catalog
@@ -460,19 +543,16 @@ class VkApiService {
     int count = 50,
   }) async {
     try {
-      final params = <String, String>{
-        'offset': offset.toString(),
-        'count': count.toString(),
-      };
-
-      final data = await _call(method: 'audio.getPopular', params: params);
+      // Try via execute
+      final code = 'return API.audio.getPopular({"offset": $offset, "count": $count});';
+      final data = await _execute(code);
       final items = data['response'] as List? ?? [];
       return items
           .whereType<Map<String, dynamic>>()
           .map((e) => Track.fromJson(e))
           .toList();
     } catch (e) {
-      debugPrint('getPopular failed: $e');
+      debugPrint('getPopular via execute failed: $e');
       return [];
     }
   }
@@ -481,16 +561,20 @@ class VkApiService {
   Future<List<Track>> getAudioById({
     required List<String> audioIds,
   }) async {
-    final params = <String, String>{
-      'audios': audioIds.join(','),
-    };
-
-    final data = await _call(method: 'audio.getById', params: params);
-    final items = data['response'] as List? ?? [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Track.fromJson(e))
-        .toList();
+    try {
+      // Try via execute
+      final idsJson = audioIds.map((id) => '"$id"').join(',');
+      final code = 'return API.audio.getById({"audios": [$idsJson]});';
+      final data = await _execute(code);
+      final items = data['response'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (e) {
+      debugPrint('getAudioById via execute failed: $e');
+      return [];
+    }
   }
 
   // Get VK Mix (personalized mix from catalog)

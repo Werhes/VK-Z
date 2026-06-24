@@ -136,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const Text(
               '1. Авторизуйся в открывшемся браузере\n'
               '2. Скопируй полный URL из адресной строки\n'
-              '   (начинается с https://oauth.vk.com/blank.html#)\n'
+              '   (начинается с https://oauth.vk.ru/blank.html#)\n'
               '3. Вставь его в поле ниже',
               style: TextStyle(color: Colors.white70, fontSize: 13),
             ),
@@ -238,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           setState(() {
             _errorMessage = 'Приложение VK заблокировано.\n'
-                'Создай своё приложение на https://dev.vk.com/\n'
+                'Создай своё приложение на https://dev.vk.ru/\n'
                 'и укажи его ID в lib/services/vk_config.dart';
             _isLoading = false;
           });

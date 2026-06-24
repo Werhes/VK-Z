@@ -5,14 +5,14 @@ class VkConfig {
   // VK API version
   static const String apiVersion = '5.131';
 
-  // VK OAuth URL
-  static const String authUrl = 'https://oauth.vk.com/authorize';
+  // VK OAuth URL (используем vk.ru, т.к. vk.com заблокирован)
+  static const String authUrl = 'https://oauth.vk.ru/authorize';
 
-  // VK API base URL
-  static const String apiBaseUrl = 'https://api.vk.com/method';
+  // VK API base URL (используем vk.ru, т.к. vk.com заблокирован)
+  static const String apiBaseUrl = 'https://api.vk.ru/method';
 
   // OAuth redirect URL
-  static const String redirectUri = 'https://oauth.vk.com/blank.html';
+  static const String redirectUri = 'https://oauth.vk.ru/blank.html';
 
   // Required permissions for music access
   static const String scope = 'audio,offline';
