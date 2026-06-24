@@ -564,4 +564,214 @@ class VkApiService {
     }
     return null;
   }
+
+  // ==========================================
+  // Methods that accept pre-fetched catalog data
+  // (to avoid fetching catalog multiple times)
+  // ==========================================
+
+  /// Extract tracks from already-fetched catalog data
+  Future<List<Track>> getTracksFromCatalogData(Map<String, dynamic> catalog) async {
+    return _getTracksFromCatalogData(catalog);
+  }
+
+  /// Extract playlists from already-fetched catalog data
+  Future<List<Playlist>> getPlaylistsFromCatalogData(Map<String, dynamic> catalog) async {
+    return _getPlaylistsFromCatalogData(catalog);
+  }
+
+  /// Extract recommendations from already-fetched catalog data
+  Future<List<Track>> getRecommendationsFromCatalogData(Map<String, dynamic> catalog) async {
+    return _getRecommendationsFromCatalogData(catalog);
+  }
+
+  /// Extract mix from already-fetched catalog data
+  Future<Mix?> getMixFromCatalogData(Map<String, dynamic> catalog) async {
+    return _getMixFromCatalogData(catalog);
+  }
+
+  /// Internal: extract tracks from catalog data
+  Future<List<Track>> _getTracksFromCatalogData(Map<String, dynamic> catalog) async {
+    try {
+      final responseData = catalog['response'];
+      if (responseData == null) {
+        debugPrint('Catalog response is null');
+        return [];
+      }
+
+      List<dynamic> sections = [];
+      if (responseData is Map<String, dynamic>) {
+        sections = responseData['sections'] as List<dynamic>? ?? [];
+      } else if (responseData is List<dynamic>) {
+        sections = responseData;
+      }
+
+      if (sections.isEmpty) {
+        return _extractTracksFromResponse(responseData);
+      }
+
+      // First pass: look for sections with user's music
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final sectionId = _getStringValue(section, 'id');
+        final sectionTitle = _getStringValue(section, 'title');
+
+        final tracks = _extractTracksFromSection(section);
+        if (tracks.isNotEmpty && _isUserMusicSection(sectionId, sectionTitle)) {
+          return tracks;
+        }
+      }
+
+      // Second pass: collect all unique tracks from all sections
+      final allTracks = <Track>[];
+      final seenIds = <String>{};
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final tracks = _extractTracksFromSection(section);
+        for (final track in tracks) {
+          final key = '${track.ownerId}_${track.id}';
+          if (seenIds.add(key)) {
+            allTracks.add(track);
+          }
+        }
+      }
+
+      return allTracks;
+    } catch (e) {
+      debugPrint('Failed to extract tracks from catalog data: $e');
+      return [];
+    }
+  }
+
+  /// Internal: extract playlists from catalog data
+  Future<List<Playlist>> _getPlaylistsFromCatalogData(Map<String, dynamic> catalog) async {
+    try {
+      final responseData = catalog['response'];
+      if (responseData == null) return [];
+
+      List<dynamic> sections = [];
+      if (responseData is Map<String, dynamic>) {
+        sections = responseData['sections'] as List<dynamic>? ?? [];
+      } else if (responseData is List<dynamic>) {
+        sections = responseData;
+      }
+
+      final playlists = <Playlist>[];
+
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+
+        for (final field in ['playlists', 'albums', 'collections', 'lists']) {
+          final items = section[field] as List? ?? [];
+          for (final item in items) {
+            if (item is! Map<String, dynamic>) continue;
+            try {
+              playlists.add(Playlist.fromJson(item));
+            } catch (e) {
+              debugPrint('Failed to parse playlist: $e');
+            }
+          }
+        }
+      }
+
+      return playlists;
+    } catch (e) {
+      debugPrint('Failed to extract playlists from catalog data: $e');
+      return [];
+    }
+  }
+
+  /// Internal: extract recommendations from catalog data
+  Future<List<Track>> _getRecommendationsFromCatalogData(Map<String, dynamic> catalog) async {
+    try {
+      final responseData = catalog['response'];
+      if (responseData == null) return [];
+
+      List<dynamic> sections = [];
+      if (responseData is Map<String, dynamic>) {
+        sections = responseData['sections'] as List<dynamic>? ?? [];
+      } else if (responseData is List<dynamic>) {
+        sections = responseData;
+      }
+
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final sectionId = _getStringValue(section, 'id').toLowerCase();
+        final sectionTitle = _getStringValue(section, 'title').toLowerCase();
+
+        if (sectionId.contains('recommend') ||
+            sectionId.contains('discover') ||
+            sectionId.contains('popular') ||
+            sectionId.contains('new') ||
+            sectionTitle.contains('рекоменд') ||
+            sectionTitle.contains('популяр') ||
+            sectionTitle.contains('новин')) {
+          final tracks = _extractTracksFromSection(section);
+          if (tracks.isNotEmpty) {
+            return tracks;
+          }
+        }
+      }
+
+      return [];
+    } catch (e) {
+      debugPrint('Failed to extract recommendations from catalog data: $e');
+      return [];
+    }
+  }
+
+  /// Internal: extract mix from catalog data
+  Future<Mix?> _getMixFromCatalogData(Map<String, dynamic> catalog) async {
+    try {
+      final responseData = catalog['response'];
+      if (responseData == null) return null;
+
+      List<dynamic> sections = [];
+      if (responseData is Map<String, dynamic>) {
+        sections = responseData['sections'] as List<dynamic>? ?? [];
+      } else if (responseData is List<dynamic>) {
+        sections = responseData;
+      }
+
+      // Look for mix section in catalog
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final sectionId = _getStringValue(section, 'id').toLowerCase();
+        final sectionTitle = _getStringValue(section, 'title');
+
+        if (sectionId.contains('mix') ||
+            sectionId.contains('recommended') ||
+            sectionTitle.toLowerCase().contains('микс')) {
+          final tracks = _extractTracksFromSection(section);
+
+          if (tracks.isNotEmpty) {
+            return Mix(
+              id: sectionId,
+              title: section['title'] as String? ?? 'Микс',
+              description: section['subtitle'] as String?,
+              coverUrl: _extractSectionCover(section),
+              tracks: tracks,
+            );
+          }
+        }
+      }
+
+      // Fallback: create mix from catalog tracks
+      final allTracks = await _getTracksFromCatalogData(catalog);
+      if (allTracks.length >= 5) {
+        allTracks.shuffle();
+        return Mix(
+          id: 'my_music_mix',
+          title: 'Мой Микс',
+          description: 'Ваши треки в случайном порядке',
+          tracks: allTracks.take(30).toList(),
+        );
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('getMixFromCatalogData failed: $e');
+      return null;
+    }
+  }
 }

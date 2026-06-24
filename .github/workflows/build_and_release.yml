@@ -287,8 +287,17 @@ jobs:
 
       - name: Create ZIP archive
         run: |
-          cd build/macos/Build/Products/Release
-          zip -r ../../../../../vk_z_macos_${{ github.event.inputs.version_name || 'latest' }}.zip Runner.app
+          # Find the Runner.app in the build output
+          APP_PATH=$(find build/macos -name "Runner.app" -type d 2>/dev/null | head -1)
+          if [ -n "$APP_PATH" ]; then
+            echo "Found Runner.app at: $APP_PATH"
+            cd "$(dirname "$APP_PATH")"
+            zip -r "$GITHUB_WORKSPACE/vk_z_macos_${{ github.event.inputs.version_name || 'latest' }}.zip" Runner.app
+          else
+            echo "Runner.app not found in build/macos"
+            ls -la build/macos/ 2>/dev/null || echo "build/macos directory not found"
+            exit 1
+          fi
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -333,8 +342,15 @@ jobs:
 
       - name: Create ZIP archive
         run: |
-          cd build/linux/x64/release/bundle
-          zip -r ../../../../../vk_z_linux_${{ github.event.inputs.version_name || 'latest' }}.zip .
+          BUNDLE_DIR="build/linux/x64/release/bundle"
+          if [ -d "$BUNDLE_DIR" ]; then
+            cd "$BUNDLE_DIR"
+            zip -r "$GITHUB_WORKSPACE/vk_z_linux_${{ github.event.inputs.version_name || 'latest' }}.zip" .
+          else
+            echo "Linux bundle not found at $BUNDLE_DIR"
+            ls -la build/linux/ 2>/dev/null || echo "build/linux directory not found"
+            exit 1
+          fi
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -400,6 +416,8 @@ jobs:
           | 📱 Android (x86_64) | \`app-x86_64-release.apk\` |
           | 📦 Android (Bundle) | \`app-release.aab\` |
           | 🍎 iOS | \`vk_z_ios_\${VERSION}.ipa\` |
+          | 💻 macOS | \`vk_z_macos_\${VERSION}.zip\` |
+          | 🐧 Linux | \`vk_z_linux_\${VERSION}.zip\` |
           | 🪟 Windows | \`vk_z_windows_\${VERSION}.zip\` |
 
           ---

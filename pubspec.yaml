@@ -68,3 +68,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/fonts/
+
+  fonts:
+    - family: VKSansDisplay
+      fonts:
+        - asset: assets/fonts/VKSansDisplay-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/VKSansDisplay-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/VKSansDisplay-Bold.ttf
+          weight: 700

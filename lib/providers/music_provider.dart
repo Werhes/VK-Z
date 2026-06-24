@@ -77,18 +77,22 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Load user's music
+  // Load user's music - optimized to fetch catalog once
   Future<void> loadUserMusic() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      // Fetch catalog once and share the result
+      final catalog = await _apiService.getCatalog();
+
+      // Parse all data from the single catalog response
       final results = await Future.wait([
-        _apiService.getTracks(count: 50),
-        _apiService.getPlaylists(count: 50),
-        _apiService.getRecommendations(count: 20),
-        _apiService.getMix(),
+        _apiService.getTracksFromCatalogData(catalog),
+        _apiService.getPlaylistsFromCatalogData(catalog),
+        _apiService.getRecommendationsFromCatalogData(catalog),
+        _apiService.getMixFromCatalogData(catalog),
       ]);
 
       _tracks = results[0] as List<Track>;
@@ -100,6 +104,7 @@ class MusicProvider extends ChangeNotifier {
       await loadDownloadedTracks();
     } catch (e) {
       _error = e.toString();
+      debugPrint('loadUserMusic error: $e');
     }
 
     _isLoading = false;

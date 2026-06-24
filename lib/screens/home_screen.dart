@@ -41,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return IndexedStack(
             index: _currentTab,
             children: [
+              _HomeTab(provider: provider, playTrack: _playTrack),
               _MusicTab(provider: provider, playTrack: _playTrack),
               _SearchTab(provider: provider, playTrack: _playTrack),
               _ProfileTab(provider: provider, playTrack: _playTrack),
@@ -72,25 +73,32 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             children: [
               _NavItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home,
+                label: 'Главная',
+                isActive: _currentTab == 0,
+                onTap: () => setState(() => _currentTab = 0),
+              ),
+              _NavItem(
                 icon: Icons.library_music_outlined,
                 activeIcon: Icons.library_music,
                 label: 'Моя музыка',
-                isActive: _currentTab == 0,
-                onTap: () => setState(() => _currentTab = 0),
+                isActive: _currentTab == 1,
+                onTap: () => setState(() => _currentTab = 1),
               ),
               _NavItem(
                 icon: Icons.search_outlined,
                 activeIcon: Icons.search,
                 label: 'Поиск',
-                isActive: _currentTab == 1,
-                onTap: () => setState(() => _currentTab = 1),
+                isActive: _currentTab == 2,
+                onTap: () => setState(() => _currentTab = 2),
               ),
               _NavItem(
                 icon: Icons.person_outline,
                 activeIcon: Icons.person,
                 label: 'Профиль',
-                isActive: _currentTab == 2,
-                onTap: () => setState(() => _currentTab = 2),
+                isActive: _currentTab == 3,
+                onTap: () => setState(() => _currentTab = 3),
               ),
             ],
           ),
@@ -151,13 +159,13 @@ class _NavItem extends StatelessWidget {
 }
 
 // ============================================
-// TAB 1: МОЯ МУЗЫКА
+// TAB 0: ГЛАВНАЯ
 // ============================================
-class _MusicTab extends StatelessWidget {
+class _HomeTab extends StatelessWidget {
   final MusicProvider provider;
   final Function(Track, List<Track>) playTrack;
 
-  const _MusicTab({required this.provider, required this.playTrack});
+  const _HomeTab({required this.provider, required this.playTrack});
 
   @override
   Widget build(BuildContext context) {
@@ -202,9 +210,7 @@ class _MusicTab extends StatelessWidget {
 
     final hasContent = provider.mix != null ||
         provider.downloadedTracks.isNotEmpty ||
-        provider.recommendations.isNotEmpty ||
-        provider.playlists.isNotEmpty ||
-        provider.tracks.isNotEmpty;
+        provider.recommendations.isNotEmpty;
 
     if (!provider.isLoading && !hasContent) {
       return RefreshIndicator(
@@ -274,46 +280,10 @@ class _MusicTab extends StatelessWidget {
             ),
           ],
 
-          // Playlists
-          if (provider.playlists.isNotEmpty) ...[
-            _SectionHeaderWithAction(
-              title: 'Мои плейлисты',
-              actionLabel: 'Показать все',
-              onAction: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const PlaylistsScreen(),
-                  ),
-                );
-              },
-            ),
-            SizedBox(
-              height: 170,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: provider.playlists.length,
-                itemBuilder: (context, index) {
-                  final playlist = provider.playlists[index];
-                  return PlaylistCard(
-                    playlist: playlist,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PlaylistDetailScreen(playlist: playlist),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-
-          // My tracks
+          // Recently played / popular section placeholder
           if (provider.tracks.isNotEmpty) ...[
-            _SectionHeader(title: 'Мои треки'),
-            ...provider.tracks.map((track) => TrackTile(
+            _SectionHeader(title: 'Недавно прослушано'),
+            ...provider.tracks.take(5).map((track) => TrackTile(
                   track: track,
                   onTap: () => playTrack(track, provider.tracks),
                   onPlay: () => playTrack(track, provider.tracks),
@@ -452,6 +422,145 @@ class _MusicTab extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ============================================
+// TAB 1: МОЯ МУЗЫКА
+// ============================================
+class _MusicTab extends StatelessWidget {
+  final MusicProvider provider;
+  final Function(Track, List<Track>) playTrack;
+
+  const _MusicTab({required this.provider, required this.playTrack});
+
+  @override
+  Widget build(BuildContext context) {
+    if (provider.isLoading && provider.tracks.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                provider.error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                provider.clearError();
+                provider.loadUserMusic();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Повторить'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final hasContent = provider.playlists.isNotEmpty || provider.tracks.isNotEmpty;
+
+    if (!provider.isLoading && !hasContent) {
+      return RefreshIndicator(
+        onRefresh: () => provider.loadUserMusic(),
+        child: ListView(
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.library_music_outlined, size: 72, color: Colors.grey[700]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Нет музыки',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Потяните вниз для обновления',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.loadUserMusic(),
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 16),
+        children: [
+          const SizedBox(height: 8),
+
+          // Playlists
+          if (provider.playlists.isNotEmpty) ...[
+            _SectionHeaderWithAction(
+              title: 'Мои плейлисты',
+              actionLabel: 'Показать все',
+              onAction: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PlaylistsScreen(),
+                  ),
+                );
+              },
+            ),
+            SizedBox(
+              height: 170,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: provider.playlists.length,
+                itemBuilder: (context, index) {
+                  final playlist = provider.playlists[index];
+                  return PlaylistCard(
+                    playlist: playlist,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => PlaylistDetailScreen(playlist: playlist),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+
+          // My tracks
+          if (provider.tracks.isNotEmpty) ...[
+            _SectionHeader(title: 'Мои треки'),
+            ...provider.tracks.map((track) => TrackTile(
+                  track: track,
+                  onTap: () => playTrack(track, provider.tracks),
+                  onPlay: () => playTrack(track, provider.tracks),
+                )),
+          ],
+        ],
       ),
     );
   }
