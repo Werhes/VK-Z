@@ -44,7 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
               if (mounted) {
                 setState(() => _isLoading = false);
               }
-              _checkForToken(url);
+              if (!_checkForToken(url)) {
+                _checkForAuthError(url);
+              }
             },
             onWebResourceError: (error) {
               debugPrint('WebView error: ${error.description} (code: ${error.errorCode}, type: ${error.errorType})');
@@ -103,8 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _checkForToken(String url) {
-    if (!url.startsWith(VkConfig.redirectUri)) return;
+  /// Returns true if a token was found and processed.
+  bool _checkForToken(String url) {
+    if (!url.startsWith(VkConfig.redirectUri)) return false;
 
     final token = VkConfig.extractToken(url);
     final userId = VkConfig.extractUserId(url);
@@ -112,6 +115,35 @@ class _LoginScreenState extends State<LoginScreen> {
     if (token != null) {
       context.read<MusicProvider>().setToken(token, userId: userId);
       Navigator.of(context).pushReplacementNamed('/home');
+      return true;
+    }
+    return false;
+  }
+
+  void _checkForAuthError(String url) {
+    // VK returns JSON error in the page body when app is blocked
+    if (url.contains('error=') || url.contains('error_description=')) {
+      final uri = Uri.parse(url);
+      final error = uri.queryParameters['error'] ?? '';
+      final errorDesc = uri.queryParameters['error_description'] ?? '';
+
+      if (error == 'invalid_request' && errorDesc.contains('blocked')) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Приложение VK заблокировано.\n'
+                'Создай своё приложение на https://dev.vk.com/\n'
+                'и укажи его ID в lib/services/vk_config.dart';
+            _isLoading = false;
+          });
+        }
+      } else if (errorDesc.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Ошибка авторизации VK: $errorDesc';
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 

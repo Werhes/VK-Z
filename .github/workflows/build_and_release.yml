@@ -291,6 +291,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
+
+      - name: Debug artifacts
+        if: steps.check_secrets.outputs.telegram_configured == 'true'
+        shell: bash
+        run: |
+          echo "=== Artifacts directory ==="
+          find artifacts -type f 2>/dev/null || echo "No files found"
+          echo "=== Directory structure ==="
+          ls -laR artifacts/ 2>/dev/null || echo "No artifacts dir"
 
       - name: Send message + files to Telegram
         if: steps.check_secrets.outputs.telegram_configured == 'true'
@@ -302,62 +312,46 @@ jobs:
           TITLE: ${{ github.event.inputs.release_title }}
           NOTES: ${{ github.event.inputs.release_notes }}
           REPO: ${{ github.repository }}
+          APP_NAME: ${{ env.APP_NAME }}
         run: |
-          # Escape markdown special chars for caption
-          NOTES_ESCAPED=$(echo "$NOTES" | sed 's/[_*\[\]()~`>#+\-=|{}.!]/\\&/g')
-          
-          # Send text message first
-          MESSAGE="🚀 *${APP_NAME}* — новый релиз%0A%0A"
-          MESSAGE+="📦 *Версия:* \`$VERSION\`%0A"
-          MESSAGE+="📝 *Название:* $TITLE%0A%0A"
-          MESSAGE+="📋 *Что нового:*%0A\`\`\`%0A${NOTES_ESCAPED}%0A\`\`\`%0A%0A"
-          MESSAGE+="🔗 *Скачать:* https://github.com/$REPO/releases/tag/$VERSION%0A%0A"
-          MESSAGE+="⚡ Собрано автоматически через GitHub Actions"
-          
-          curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
-            -d "chat_id=$CHAT_ID" \
-            -d "text=$MESSAGE" \
-            -d "parse_mode=MarkdownV2" \
-            -d "disable_web_page_preview=true" > /dev/null
+          # Build message with printf to handle multi-line properly
+          MESSAGE_TEXT=$(printf "%s\n\n📦 Версия: %s\n📝 Название: %s\n\n📋 Что нового:\n%s\n\n🔗 Скачать: https://github.com/%s/releases/tag/%s\n\n⚡ Собрано автоматически через GitHub Actions" \
+            "${APP_NAME} — новый релиз" \
+            "${VERSION}" \
+            "${TITLE}" \
+            "${NOTES}" \
+            "${REPO}" \
+            "${VERSION}")
 
-          # Send APK files
-          echo "--- Sending APK files ---"
+          # Send text message (no parse_mode = plain text, avoids formatting issues)
+          echo "Sending text message..."
+          curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+            -d "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE_TEXT}" \
+            -d "disable_web_page_preview=true" && echo " ✅ Text sent" || echo " ❌ Text failed"
+
+          # Send files
+          echo "--- Sending files ---"
           if [ -d "artifacts" ]; then
-            find artifacts -name "*.apk" 2>/dev/null | while read file; do
+            # Send all APK, AAB, and ZIP files
+            find artifacts -type f \( -name "*.apk" -o -name "*.aab" -o -name "*.zip" \) 2>/dev/null | while read file; do
               filename=$(basename "$file")
-              echo "Uploading: $filename"
-              curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendDocument" \
-                -F "chat_id=$CHAT_ID" \
-                -F "document=@$file" \
-                -F "caption=📱 *$filename*%0A%0A$APP_NAME $VERSION" \
-                -F "parse_mode=MarkdownV2" > /dev/null || echo "Failed to send $filename"
-            done
-
-            # Send AAB file
-            echo "--- Sending AAB file ---"
-            find artifacts -name "*.aab" 2>/dev/null | while read file; do
-              filename=$(basename "$file")
-              echo "Uploading: $filename"
-              curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendDocument" \
-                -F "chat_id=$CHAT_ID" \
-                -F "document=@$file" \
-                -F "caption=📦 *$filename*%0A%0A$APP_NAME $VERSION" \
-                -F "parse_mode=MarkdownV2" > /dev/null || echo "Failed to send $filename"
-            done
-
-            # Send Windows ZIP
-            echo "--- Sending Windows ZIP ---"
-            find artifacts -name "*.zip" 2>/dev/null | while read file; do
-              filename=$(basename "$file")
-              echo "Uploading: $filename"
-              curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendDocument" \
-                -F "chat_id=$CHAT_ID" \
-                -F "document=@$file" \
-                -F "caption=🪟 *$filename*%0A%0A$APP_NAME $VERSION" \
-                -F "parse_mode=MarkdownV2" > /dev/null || echo "Failed to send $filename"
+              filesize=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "?")
+              echo "Uploading: $filename (${filesize} bytes)"
+              
+              RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
+                -F "chat_id=${CHAT_ID}" \
+                -F "document=@${file}" \
+                -F "caption=${filename} — ${APP_NAME} ${VERSION}" 2>&1)
+              
+              if echo "$RESPONSE" | grep -q '"ok":true'; then
+                echo " ✅ $filename sent"
+              else
+                echo " ❌ $filename failed: $RESPONSE"
+              fi
             done
           else
             echo "No artifacts directory found, skipping file uploads"
           fi
 
-          echo "✅ All files sent to Telegram!"
+          echo "✅ Done!"

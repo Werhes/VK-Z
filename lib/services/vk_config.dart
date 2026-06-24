@@ -1,7 +1,6 @@
 class VkConfig {
-  // Публичный VK Application ID для Standalone приложения
-  // Если не работает — замени на свой: https://dev.vk.com/ -> Создать приложение -> Standalone
-  static const int appId = 6121396;
+  // VK App ID от VK Kate API (рабочий, не заблокирован)
+  static const int appId = 2685278;
 
   // VK API version
   static const String apiVersion = '5.131';
