@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_provider.dart';
 import '../models/track.dart';
-import '../models/mix.dart';
 import '../widgets/track_tile.dart';
-import '../widgets/playlist_card.dart';
 import '../widgets/mini_player.dart';
-import 'playlist_detail_screen.dart';
-import 'mix_screen.dart';
+import 'my_music_screen.dart';
 import 'settings_screen.dart';
-import 'playlists_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentTab = 0;
+  // Tabs: 0=Моя музыка, 1=Поиск, 2=Профиль
 
   @override
   void initState() {
@@ -41,7 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
           return IndexedStack(
             index: _currentTab,
             children: [
-              _HomeTab(provider: provider, playTrack: _playTrack),
               _MusicTab(provider: provider, playTrack: _playTrack),
               _SearchTab(provider: provider, playTrack: _playTrack),
               _ProfileTab(provider: provider, playTrack: _playTrack),
@@ -53,382 +49,37 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const MiniPlayer(),
-          _buildBottomNav(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[950],
-        border: Border(
-          top: BorderSide(color: Colors.grey[900]!, width: 0.5),
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              _NavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'Главная',
-                isActive: _currentTab == 0,
-                onTap: () => setState(() => _currentTab = 0),
-              ),
-              _NavItem(
-                icon: Icons.library_music_outlined,
-                activeIcon: Icons.library_music,
+          NavigationBar(
+            selectedIndex: _currentTab,
+            onDestinationSelected: (int index) {
+              setState(() => _currentTab = index);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.music_note_outlined),
+                selectedIcon: Icon(Icons.music_note),
                 label: 'Моя музыка',
-                isActive: _currentTab == 1,
-                onTap: () => setState(() => _currentTab = 1),
               ),
-              _NavItem(
-                icon: Icons.search_outlined,
-                activeIcon: Icons.search,
+              NavigationDestination(
+                icon: Icon(Icons.search_outlined),
+                selectedIcon: Icon(Icons.search),
                 label: 'Поиск',
-                isActive: _currentTab == 2,
-                onTap: () => setState(() => _currentTab = 2),
               ),
-              _NavItem(
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
                 label: 'Профиль',
-                isActive: _currentTab == 3,
-                onTap: () => setState(() => _currentTab = 3),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================
-// Bottom Navigation Item
-// ============================================
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                size: 24,
-                color: isActive ? Colors.blue : Colors.grey[500],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isActive ? Colors.blue : Colors.grey[500],
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================
-// TAB 0: ГЛАВНАЯ
-// ============================================
-class _HomeTab extends StatelessWidget {
-  final MusicProvider provider;
-  final Function(Track, List<Track>) playTrack;
-
-  const _HomeTab({required this.provider, required this.playTrack});
-
-  @override
-  Widget build(BuildContext context) {
-    if (provider.isLoading && provider.tracks.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (provider.error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                provider.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                provider.clearError();
-                provider.loadUserMusic();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Повторить'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final hasContent = provider.mix != null ||
-        provider.downloadedTracks.isNotEmpty ||
-        provider.recommendations.isNotEmpty;
-
-    if (!provider.isLoading && !hasContent) {
-      return RefreshIndicator(
-        onRefresh: () => provider.loadUserMusic(),
-        child: ListView(
-          children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.music_note_outlined, size: 72, color: Colors.grey[700]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Музыка загружается...',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[500]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Потяните вниз для обновления',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => provider.loadUserMusic(),
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 16),
-        children: [
-          const SizedBox(height: 8),
-
-          // VK Mix card
-          if (provider.mix != null) ...[
-            _buildMixCard(context, provider.mix!),
-            const SizedBox(height: 8),
-          ],
-
-          // Downloaded tracks summary
-          if (provider.downloadedTracks.isNotEmpty) ...[
-            _buildDownloadsCard(context),
-            const SizedBox(height: 8),
-          ],
-
-          // Recommendations
-          if (provider.recommendations.isNotEmpty) ...[
-            _SectionHeader(title: 'Рекомендации'),
-            SizedBox(
-              height: 190,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: provider.recommendations.length,
-                itemBuilder: (context, index) {
-                  final track = provider.recommendations[index];
-                  return _RecommendationCard(
-                    track: track,
-                    onTap: () => playTrack(track, provider.recommendations),
-                  );
-                },
-              ),
-            ),
-          ],
-
-          // Recently played / popular section placeholder
-          if (provider.tracks.isNotEmpty) ...[
-            _SectionHeader(title: 'Недавно прослушано'),
-            ...provider.tracks.take(5).map((track) => TrackTile(
-                  track: track,
-                  onTap: () => playTrack(track, provider.tracks),
-                  onPlay: () => playTrack(track, provider.tracks),
-                )),
-          ],
         ],
       ),
     );
   }
-
-  Widget _buildMixCard(BuildContext context, Mix mix) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => MixScreen(mix: mix)),
-        );
-      },
-      child: Container(
-        height: 160,
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1A237E), Color(0xFF4A148C), Color(0xFF0D0D2B)],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Decorative circles
-            Positioned(
-              right: -20, top: -20,
-              child: Container(
-                width: 120, height: 120,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0x0FFFFFFF),
-                ),
-              ),
-            ),
-            Positioned(
-              right: 40, bottom: -30,
-              child: Container(
-                width: 80, height: 80,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0x0FFFFFFF),
-                ),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const Icon(Icons.auto_awesome, color: Colors.amber, size: 24),
-                  const SizedBox(height: 8),
-                  Text(
-                    mix.title,
-                    style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    mix.description ?? '${mix.tracks.length} треков',
-                    style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.play_arrow, size: 16, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text('Слушать', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDownloadsCard(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => _DownloadedTracksScreen(provider: provider),
-            ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.grey[900],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.download_done, color: Colors.green, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Скачано', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                    Text('${provider.downloadedTracks.length} треков',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ============================================
-// TAB 1: МОЯ МУЗЫКА
+// TAB 0: МОЯ МУЗЫКА
 // ============================================
 class _MusicTab extends StatelessWidget {
   final MusicProvider provider;
@@ -438,136 +89,15 @@ class _MusicTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (provider.isLoading && provider.tracks.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (provider.error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                provider.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                provider.clearError();
-                provider.loadUserMusic();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Повторить'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final hasContent = provider.playlists.isNotEmpty || provider.tracks.isNotEmpty;
-
-    if (!provider.isLoading && !hasContent) {
-      return RefreshIndicator(
-        onRefresh: () => provider.loadUserMusic(),
-        child: ListView(
-          children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.library_music_outlined, size: 72, color: Colors.grey[700]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Нет музыки',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[500]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Потяните вниз для обновления',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => provider.loadUserMusic(),
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 16),
-        children: [
-          const SizedBox(height: 8),
-
-          // Playlists
-          if (provider.playlists.isNotEmpty) ...[
-            _SectionHeaderWithAction(
-              title: 'Мои плейлисты',
-              actionLabel: 'Показать все',
-              onAction: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const PlaylistsScreen(),
-                  ),
-                );
-              },
-            ),
-            SizedBox(
-              height: 170,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: provider.playlists.length,
-                itemBuilder: (context, index) {
-                  final playlist = provider.playlists[index];
-                  return PlaylistCard(
-                    playlist: playlist,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PlaylistDetailScreen(playlist: playlist),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-
-          // My tracks
-          if (provider.tracks.isNotEmpty) ...[
-            _SectionHeader(title: 'Мои треки'),
-            ...provider.tracks.map((track) => TrackTile(
-                  track: track,
-                  onTap: () => playTrack(track, provider.tracks),
-                  onPlay: () => playTrack(track, provider.tracks),
-                )),
-          ],
-        ],
-      ),
+    return MyMusicScreen(
+      provider: provider,
+      playTrack: playTrack,
     );
   }
 }
 
 // ============================================
-// TAB 2: ПОИСК
+// TAB 1: ПОИСК
 // ============================================
 class _SearchTab extends StatefulWidget {
   final MusicProvider provider;
@@ -690,7 +220,7 @@ class _SearchTabState extends State<_SearchTab> {
 }
 
 // ============================================
-// TAB 3: ПРОФИЛЬ
+// TAB 2: ПРОФИЛЬ
 // ============================================
 class _ProfileTab extends StatelessWidget {
   final MusicProvider provider;
@@ -800,105 +330,6 @@ class _MenuTile extends StatelessWidget {
       trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
-    );
-  }
-}
-
-// ============================================
-// SHARED WIDGETS
-// ============================================
-class _SectionHeader extends StatelessWidget {
-  final String title;
-
-  const _SectionHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
-
-class _SectionHeaderWithAction extends StatelessWidget {
-  final String title;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  const _SectionHeaderWithAction({
-    required this.title,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          GestureDetector(
-            onTap: onAction,
-            child: Text(
-              actionLabel,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.blue,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecommendationCard extends StatelessWidget {
-  final Track track;
-  final VoidCallback onTap;
-
-  const _RecommendationCard({required this.track, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 140,
-        margin: const EdgeInsets.only(right: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 140,
-                height: 140,
-                color: Colors.grey[900],
-                child: track.albumArtUrl != null
-                    ? Image.network(track.albumArtUrl!, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.music_note, size: 40))
-                    : const Icon(Icons.music_note, size: 40),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-            Text(track.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.grey, fontSize: 11)),
-          ],
-        ),
-      ),
     );
   }
 }

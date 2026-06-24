@@ -7,9 +7,9 @@ import '../services/download_service.dart';
 
 class MusicProvider extends ChangeNotifier {
   final VkApiService _apiService;
-  final DownloadService _downloadService;
+  final DownloadManager _downloadService;
 
-  MusicProvider(this._apiService) : _downloadService = DownloadService();
+  MusicProvider(this._apiService) : _downloadService = DownloadManager();
 
   // Auth state
   bool _isLoading = false;
@@ -52,7 +52,7 @@ class MusicProvider extends ChangeNotifier {
   bool get hasPrevious => _currentIndex > 0;
   List<Track> get downloadedTracks => _downloadedTracks;
   bool get isLoadingDownloads => _isLoadingDownloads;
-  DownloadService get downloadService => _downloadService;
+  DownloadManager get downloadService => _downloadService;
 
   // Auth
   bool get isAuthorized => _apiService.isAuthorized;
@@ -60,6 +60,11 @@ class MusicProvider extends ChangeNotifier {
   void setToken(String token, {int? userId}) {
     _apiService.setToken(token, userId: userId);
     notifyListeners();
+  }
+
+  /// Пытается восстановить сессию из shared_preferences
+  Future<bool> tryRestoreSession() async {
+    return await _apiService.tryRestoreSession();
   }
 
   void logout() {

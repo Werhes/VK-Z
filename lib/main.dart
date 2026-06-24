@@ -35,11 +35,54 @@ class MyApp extends StatelessWidget {
             centerTitle: true,
           ),
         ),
-        initialRoute: '/login',
+        initialRoute: '/splash',
         routes: {
+          '/splash': (context) => const SplashScreen(),
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
         },
+      ),
+    );
+  }
+}
+
+/// Экран загрузки — проверяет сохранённую сессию и перенаправляет
+/// на /home (если есть токен) или на /login (если нет)
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    final provider = context.read<MusicProvider>();
+    final restored = await provider.tryRestoreSession();
+
+    if (!mounted) return;
+
+    if (restored) {
+      // Сессия восстановлена — сразу загружаем музыку и идём на home
+      provider.loadUserMusic();
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      // Нет сохранённой сессии — показываем экран входа
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

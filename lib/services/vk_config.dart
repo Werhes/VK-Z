@@ -2,8 +2,8 @@ class VkConfig {
   // VK App ID от VK Kate API (рабочий, не заблокирован)
   static const int appId = 2685278;
 
-  // VK API version
-  static const String apiVersion = '5.131';
+  // VK API version - используем 8.x как в VK Android App (5.x блокирует audio.* методы)
+  static const String apiVersion = '8.154';
 
   // VK OAuth URL (используем vk.ru, т.к. vk.com заблокирован)
   static const String authUrl = 'https://oauth.vk.ru/authorize';
@@ -13,6 +13,16 @@ class VkConfig {
 
   // OAuth redirect URL
   static const String redirectUri = 'https://oauth.vk.ru/blank.html';
+
+  // User-Agent как в VK Android App (необходим для обхода блокировок audio.* методов)
+  static const String userAgent = 'VKAndroidApp/8.154-99999 (Android 12; SDK 32; arm64-v8a; Pixel 6; ru; 2960x1440)';
+
+  // Дополнительные заголовки как в VK Android App
+  static const Map<String, String> extraHeaders = {
+    'User-Agent': 'VKAndroidApp/8.154-99999 (Android 12; SDK 32; arm64-v8a; Pixel 6; ru; 2960x1440)',
+    'Referer': 'https://id.vk.ru/',
+    'Origin': 'https://id.vk.ru',
+  };
 
   // Required permissions for music access
   static const String scope = 'audio,offline';

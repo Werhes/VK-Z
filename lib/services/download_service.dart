@@ -1,9 +1,14 @@
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/track.dart';
+
+// ============================================
+// Download Status & Progress 
+// ============================================
 
 enum DownloadStatus { idle, downloading, completed, failed }
 
@@ -35,16 +40,94 @@ class DownloadProgress {
   }
 }
 
-class DownloadService {
+// ============================================
+// DownloadItem — загрузка одного трека (как в FlutterVK)
+// ============================================
+
+class DownloadItem {
+  final Track track;
+  final ValueNotifier<double> progress = ValueNotifier(0.0);
+  final Dio _dio;
+
+  DownloadItem({required this.track, required Dio dio}) : _dio = dio;
+
+  Future<void> download(String filePath) async {
+    if (track.trackUrl == null || track.trackUrl!.isEmpty) {
+      throw Exception('Track URL is not available');
+    }
+
+    await _dio.download(
+      track.trackUrl!,
+      filePath,
+      onReceiveProgress: (received, total) {
+        if (total != -1) {
+          progress.value = received / total;
+        }
+      },
+    );
+
+    progress.value = 1.0;
+  }
+}
+
+// ============================================
+// DownloadTask — группа загрузок с очередью (как в FlutterVK)
+// ============================================
+
+class DownloadTask {
+  final String id;
+  final String smallTitle;
+  final String longTitle;
+  final List<DownloadItem> items;
+  final ValueNotifier<double> progress = ValueNotifier(0.0);
+
+  DownloadTask({
+    required this.id,
+    required this.smallTitle,
+    required this.longTitle,
+    required this.items,
+  });
+
+  Future<void> execute(String Function(Track) getPath) async {
+    for (final item in items) {
+      void listener() {
+        progress.value = items.fold<double>(
+          0.0,
+          (total, i) => total + i.progress.value,
+        ) / items.length;
+      }
+
+      item.progress.addListener(listener);
+      try {
+        final path = getPath(item.track);
+        await item.download(path);
+      } finally {
+        item.progress.removeListener(listener);
+      }
+    }
+    progress.value = 1.0;
+  }
+}
+
+// ============================================
+// DownloadManager — управление загрузками (как в FlutterVK)
+// ============================================
+
+class DownloadManager {
   final Dio _dio;
   final Map<String, DownloadProgress> _downloads = {};
   final Map<String, StreamController<DownloadProgress>> _controllers = {};
 
-  // Cache for downloaded tracks metadata
+  // Общий прогресс по всем активным загрузкам
+  final ValueNotifier<double> globalProgress = ValueNotifier(0.0);
+  final ValueNotifier<bool> isDownloading = ValueNotifier(false);
+  int _activeDownloads = 0;
+
+  // Метаданные скачанных треков
   List<DownloadedTrackInfo> _downloadedTracks = [];
   bool _metadataLoaded = false;
 
-  DownloadService()
+  DownloadManager()
       : _dio = Dio(
           BaseOptions(
             connectTimeout: const Duration(seconds: 30),
@@ -52,7 +135,6 @@ class DownloadService {
           ),
         );
 
-  /// Get the downloads directory
   Future<Directory> get _downloadsDirectory async {
     final appDir = await getApplicationDocumentsDirectory();
     final dir = Directory('${appDir.path}/downloads');
@@ -62,39 +144,27 @@ class DownloadService {
     return dir;
   }
 
-  /// Get the metadata file path
   Future<File> get _metadataFile async {
     final appDir = await getApplicationDocumentsDirectory();
-    final file = File('${appDir.path}/downloaded_tracks.json');
-    return file;
+    return File('${appDir.path}/downloaded_tracks.json');
   }
 
-  /// Generate a unique filename for a track
   String _getTrackFilename(Track track) {
-    // Sanitize filename
     final safeTitle = track.title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
     final safeArtist = track.artist.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-    return [
-      track.ownerId.toString(),
-      track.id.toString(),
-      safeArtist,
-      '$safeTitle.mp3',
-    ].join('_');
+    return '${track.ownerId}_${track.id}_${safeArtist}_$safeTitle.mp3';
   }
 
-  /// Get the local file path for a track
   Future<String> getTrackLocalPath(Track track) async {
     final dir = await _downloadsDirectory;
     return '${dir.path}/${_getTrackFilename(track)}';
   }
 
-  /// Check if a track is downloaded
   Future<bool> isTrackDownloaded(Track track) async {
     final path = await getTrackLocalPath(track);
     return File(path).exists();
   }
 
-  /// Get download progress stream for a track
   Stream<DownloadProgress> getDownloadProgress(String trackKey) {
     _controllers.putIfAbsent(trackKey, () {
       return StreamController<DownloadProgress>.broadcast();
@@ -102,12 +172,11 @@ class DownloadService {
     return _controllers[trackKey]!.stream;
   }
 
-  /// Get current download progress
   DownloadProgress? getCurrentProgress(String trackKey) {
     return _downloads[trackKey];
   }
 
-  /// Download a track
+  /// Загрузка одного трека (как DownloadItem в FlutterVK)
   Future<String> downloadTrack(Track track, {void Function(double)? onProgress}) async {
     if (track.trackUrl == null || track.trackUrl!.isEmpty) {
       throw Exception('Track URL is not available');
@@ -118,12 +187,10 @@ class DownloadService {
     final filename = _getTrackFilename(track);
     final filePath = '${dir.path}/$filename';
 
-    // Check if already downloaded
     if (await File(filePath).exists()) {
-      _updateProgress(trackKey, DownloadProgress(
+      _updateProgress(trackKey, const DownloadProgress(
         status: DownloadStatus.completed,
         progress: 1.0,
-        localPath: filePath,
       ));
       return filePath;
     }
@@ -133,22 +200,25 @@ class DownloadService {
       progress: 0.0,
     ));
 
+    _activeDownloads++;
+    isDownloading.value = true;
+
     try {
-      await _dio.download(
-        track.trackUrl!,
-        filePath,
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            final progress = received / total;
-            _updateProgress(trackKey, DownloadProgress(
-              status: DownloadStatus.downloading,
-              progress: progress,
-              localPath: filePath,
-            ));
-            onProgress?.call(progress);
-          }
-        },
-      );
+      final item = DownloadItem(track: track, dio: _dio);
+      void listener() {
+        final p = item.progress.value;
+        _updateProgress(trackKey, DownloadProgress(
+          status: DownloadStatus.downloading,
+          progress: p,
+          localPath: filePath,
+        ));
+        onProgress?.call(p);
+        _updateGlobalProgress();
+      }
+
+      item.progress.addListener(listener);
+      await item.download(filePath);
+      item.progress.removeListener(listener);
 
       _updateProgress(trackKey, DownloadProgress(
         status: DownloadStatus.completed,
@@ -156,9 +226,7 @@ class DownloadService {
         localPath: filePath,
       ));
 
-      // Save metadata
       await _saveDownloadedTrack(track, filePath);
-
       return filePath;
     } catch (e) {
       _updateProgress(trackKey, DownloadProgress(
@@ -167,17 +235,102 @@ class DownloadService {
         error: e.toString(),
       ));
 
-      // Clean up failed download
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
       }
-
       rethrow;
+    } finally {
+      _activeDownloads--;
+      if (_activeDownloads <= 0) {
+        _activeDownloads = 0;
+        isDownloading.value = false;
+      }
+      _updateGlobalProgress();
     }
   }
 
-  /// Delete a downloaded track
+  /// Загрузка нескольких треков через DownloadTask (как в FlutterVK)
+  Future<void> downloadTracks(List<Track> tracks, {String? taskTitle}) async {
+    if (tracks.isEmpty) return;
+
+    final items = tracks.map((t) => DownloadItem(track: t, dio: _dio)).toList();
+
+    _activeDownloads += tracks.length;
+    isDownloading.value = true;
+
+    try {
+      for (final item in items) {
+        final trackKey = '${item.track.ownerId}_${item.track.id}';
+        final dir = await _downloadsDirectory;
+        final filePath = '${dir.path}/${_getTrackFilename(item.track)}';
+
+        if (await File(filePath).exists()) {
+          _updateProgress(trackKey, const DownloadProgress(
+            status: DownloadStatus.completed,
+            progress: 1.0,
+          ));
+          _activeDownloads--;
+          continue;
+        }
+
+        _updateProgress(trackKey, const DownloadProgress(
+          status: DownloadStatus.downloading,
+          progress: 0.0,
+        ));
+
+        void listener() {
+          final p = item.progress.value;
+          _updateProgress(trackKey, DownloadProgress(
+            status: DownloadStatus.downloading,
+            progress: p,
+            localPath: filePath,
+          ));
+          _updateGlobalProgress();
+        }
+
+        item.progress.addListener(listener);
+        try {
+          await item.download(filePath);
+          _updateProgress(trackKey, DownloadProgress(
+            status: DownloadStatus.completed,
+            progress: 1.0,
+            localPath: filePath,
+          ));
+          await _saveDownloadedTrack(item.track, filePath);
+        } catch (e) {
+          _updateProgress(trackKey, DownloadProgress(
+            status: DownloadStatus.failed,
+            progress: 0.0,
+            error: e.toString(),
+          ));
+        } finally {
+          item.progress.removeListener(listener);
+          _activeDownloads--;
+          _updateGlobalProgress();
+        }
+      }
+    } finally {
+      if (_activeDownloads <= 0) {
+        _activeDownloads = 0;
+        isDownloading.value = false;
+      }
+      _updateGlobalProgress();
+    }
+  }
+
+  void _updateGlobalProgress() {
+    if (_downloads.isEmpty) {
+      globalProgress.value = 0.0;
+      return;
+    }
+    final total = _downloads.values.fold<double>(
+      0.0,
+      (sum, p) => sum + p.progress,
+    );
+    globalProgress.value = total / _downloads.length;
+  }
+
   Future<void> deleteTrack(Track track) async {
     final path = await getTrackLocalPath(track);
     final file = File(path);
@@ -185,7 +338,6 @@ class DownloadService {
       await file.delete();
     }
 
-    // Remove from metadata
     _downloadedTracks.removeWhere((t) =>
         t.trackId == track.id && t.ownerId == track.ownerId);
 
@@ -197,7 +349,6 @@ class DownloadService {
     await _saveMetadata();
   }
 
-  /// Get all downloaded tracks info
   Future<List<DownloadedTrackInfo>> getDownloadedTracks() async {
     if (!_metadataLoaded) {
       await _loadMetadata();
@@ -205,7 +356,6 @@ class DownloadService {
     return List.from(_downloadedTracks);
   }
 
-  /// Save downloaded track metadata
   Future<void> _saveDownloadedTrack(Track track, String localPath) async {
     final info = DownloadedTrackInfo(
       trackId: track.id,
@@ -218,22 +368,18 @@ class DownloadService {
       downloadedAt: DateTime.now(),
     );
 
-    // Remove existing entry if any
     _downloadedTracks.removeWhere((t) =>
         t.trackId == track.id && t.ownerId == track.ownerId);
-
     _downloadedTracks.add(info);
     await _saveMetadata();
   }
 
-  /// Save metadata to file
   Future<void> _saveMetadata() async {
     final file = await _metadataFile;
     final jsonList = _downloadedTracks.map((t) => t.toJson()).toList();
     await file.writeAsString(jsonEncode(jsonList));
   }
 
-  /// Load metadata from file
   Future<void> _loadMetadata() async {
     try {
       final file = await _metadataFile;
@@ -250,13 +396,11 @@ class DownloadService {
     _metadataLoaded = true;
   }
 
-  /// Update progress and notify listeners
   void _updateProgress(String trackKey, DownloadProgress progress) {
     _downloads[trackKey] = progress;
     _controllers[trackKey]?.add(progress);
   }
 
-  /// Clean up resources
   void dispose() {
     for (final controller in _controllers.values) {
       controller.close();
@@ -265,6 +409,10 @@ class DownloadService {
     _downloads.clear();
   }
 }
+
+// ============================================
+// DownloadedTrackInfo (метаданные)
+// ============================================
 
 class DownloadedTrackInfo {
   final int trackId;
