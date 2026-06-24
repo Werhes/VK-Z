@@ -3,7 +3,7 @@
 > Flutter клиент для VK Музыки с красивым интерфейсом и поддержкой VK Микса
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.24-blue?logo=flutter)](https://flutter.dev)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows-brightgreen)](https://github.com/yourusername/vk_z)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows-brightgreen)](https://github.com/Werhes/VK-Z)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 ---
