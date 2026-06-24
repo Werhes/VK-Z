@@ -6,7 +6,7 @@ on:
       version_name:
         description: 'Название версии (например v1.0.1)'
         required: true
-        default: 'v1.0.2'
+        default: 'v1.0.3'
         type: string
       release_title:
         description: 'Заголовок релиза'
@@ -258,11 +258,98 @@ jobs:
           if-no-files-found: warn
 
   # ============================================
-  # 5. СОЗДАНИЕ РЕЛИЗА
+  # 5. СБОРКА macOS
+  # ============================================
+  build-macos:
+    name: 💻 Сборка macOS
+    needs: analyze
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Configure Flutter
+        run: |
+          flutter config --no-analytics --no-cli-animations
+          flutter pub get
+
+      - name: Generate icons
+        run: dart run flutter_launcher_icons || true
+
+      - name: Build macOS (Release)
+        run: flutter build macos --release
+
+      - name: Create ZIP archive
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r ../../../../../vk_z_macos_${{ github.event.inputs.version_name || 'latest' }}.zip Runner.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: vk_z_macos_*.zip
+          compression-level: 0
+          if-no-files-found: warn
+
+  # ============================================
+  # 6. СБОРКА LINUX
+  # ============================================
+  build-linux:
+    name: 🐧 Сборка Linux
+    needs: analyze
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Configure Flutter
+        run: |
+          flutter config --no-analytics --no-cli-animations
+          flutter pub get
+
+      - name: Generate icons
+        run: dart run flutter_launcher_icons || true
+
+      - name: Build Linux (Release)
+        run: flutter build linux --release
+
+      - name: Create ZIP archive
+        run: |
+          cd build/linux/x64/release/bundle
+          zip -r ../../../../../vk_z_linux_${{ github.event.inputs.version_name || 'latest' }}.zip .
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: vk_z_linux_*.zip
+          compression-level: 0
+          if-no-files-found: warn
+
+  # ============================================
+  # 7. СОЗДАНИЕ РЕЛИЗА
   # ============================================
   release:
     name: 📦 Создание релиза
-    needs: [build-android, build-ios, build-windows]
+    needs: [build-android, build-ios, build-windows, build-macos, build-linux]
     # Запускается только при workflow_dispatch или при пуше тега v*
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
