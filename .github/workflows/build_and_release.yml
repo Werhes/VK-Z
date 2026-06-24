@@ -1,4 +1,4 @@
-name: 🚀 VK Z Build & Release
+name: 🚀 Автосборка VK Z
 
 on:
   workflow_dispatch:
@@ -11,12 +11,12 @@ on:
       release_title:
         description: 'Заголовок релиза'
         required: true
-        default: 'VK Z - Новый релиз'
+        default: 'Новый релиз'
         type: string
       release_notes:
         description: 'Описание релиза (что нового)'
         required: true
-        default: '• Исправлены баги\n• Улучшена производительность'
+        default: '• Исправлены баги'
         type: string
       release_type:
         description: 'Тип релиза'
