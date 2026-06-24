@@ -18,11 +18,18 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _showWebView = false;
   String? _errorMessage;
   bool _webViewAvailable = true;
+  final _tokenUrlController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _initWebView();
+  }
+
+  @override
+  void dispose() {
+    _tokenUrlController.dispose();
+    super.dispose();
   }
 
   void _initWebView() {
@@ -95,10 +102,111 @@ class _LoginScreenState extends State<LoginScreen> {
       final uri = Uri.parse(VkConfig.oAuthUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (mounted) {
+          _showManualTokenDialog();
+        }
       } else {
         if (mounted) {
           setState(() {
             _errorMessage = 'Не удалось открыть браузер для авторизации.';
+          });
+        }
+      }
+    }
+  }
+
+  void _showManualTokenDialog() {
+    _tokenUrlController.clear();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A3E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.link, color: Color(0xFF0077FF)),
+            SizedBox(width: 8),
+            Text('Вставить токен', style: TextStyle(color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '1. Авторизуйся в открывшемся браузере\n'
+              '2. Скопируй полный URL из адресной строки\n'
+              '   (начинается с https://oauth.vk.com/blank.html#)\n'
+              '3. Вставь его в поле ниже',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _tokenUrlController,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+              decoration: InputDecoration(
+                hintText: 'Вставьте URL с токеном сюда...',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                filled: true,
+                fillColor: Colors.black26,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _processManualToken(_tokenUrlController.text.trim());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0077FF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Готово', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _processManualToken(String input) {
+    if (input.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Поле не может быть пустым. Вставьте URL с токеном.';
+        });
+      }
+      return;
+    }
+
+    // Try to extract token from the pasted URL
+    final token = VkConfig.extractToken(input);
+    final userId = VkConfig.extractUserId(input);
+
+    if (token != null) {
+      context.read<MusicProvider>().setToken(token, userId: userId);
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      // Maybe user pasted just the token itself (not the full URL)
+      // Check if it looks like a VK token (starts with vk1/ or is alphanumeric)
+      if (input.length > 20 && !input.contains(' ')) {
+        context.read<MusicProvider>().setToken(input, userId: null);
+        Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Не удалось извлечь токен из введённых данных.\n'
+                'Убедитесь, что вы скопировали полный URL из адресной строки.';
           });
         }
       }
@@ -121,7 +229,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _checkForAuthError(String url) {
-    // VK returns JSON error in the page body when app is blocked
     if (url.contains('error=') || url.contains('error_description=')) {
       final uri = Uri.parse(url);
       final error = uri.queryParameters['error'] ?? '';
@@ -225,7 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const Spacer(flex: 1),
 
-                // Кнопка входа
+                // Кнопка входа через VK
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -246,6 +353,32 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(28),
                       ),
                       elevation: 0,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Кнопка ручного ввода токена
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: _showManualTokenDialog,
+                    icon: const Icon(Icons.keyboard, color: Colors.white70, size: 20),
+                    label: const Text(
+                      'Ввести токен вручную',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                      ),
                     ),
                   ),
                 ),

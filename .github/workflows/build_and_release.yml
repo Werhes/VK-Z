@@ -207,7 +207,7 @@ jobs:
   release:
     name: 📦 Создание релиза
     needs: [build-android, build-windows]
-    if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -217,6 +217,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: Prepare release files
         run: |
@@ -231,11 +232,20 @@ jobs:
 
       - name: Generate release body
         run: |
+          VERSION="${{ github.event.inputs.version_name }}"
+          TITLE="${{ github.event.inputs.release_title }}"
+          NOTES="${{ github.event.inputs.release_notes }}"
+          # On push events, use git tag info
+          if [ -z "$VERSION" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+            TITLE="VK Z ${VERSION}"
+            NOTES="Автоматическая сборка"
+          fi
           cat > release_body.md << BODYEOF
-          ## ${{ github.event.inputs.release_title }}
+          ## ${TITLE}
 
           ### 📋 Что нового:
-          ${{ github.event.inputs.release_notes }}
+          ${NOTES}
 
           ---
 
@@ -247,20 +257,21 @@ jobs:
           | 📱 Android (ARM32) | \`app-armeabi-v7a-release.apk\` |
           | 📱 Android (x86_64) | \`app-x86_64-release.apk\` |
           | 📦 Android (Bundle) | \`app-release.aab\` |
-          | 🪟 Windows | \`vk_z_windows_\${{ github.event.inputs.version_name }}.zip\` |
+          | 🪟 Windows | \`vk_z_windows_\${VERSION}.zip\` |
 
           ---
 
           *Собрано автоматически через GitHub Actions*
           BODYEOF
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.event.inputs.version_name }}
-          name: ${{ github.event.inputs.release_title }}
+          tag_name: ${{ github.event.inputs.version_name || github.ref_name }}
+          name: ${{ github.event.inputs.release_title || format('VK Z {0}', github.ref_name) }}
           body_path: release_body.md
-          prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
+          prerelease: ${{ github.event.inputs.release_type == 'prerelease' || startsWith(github.ref_name, 'v') == false }}
           files: release_files/*
           fail_on_unmatched_files: false
         env:
@@ -272,7 +283,7 @@ jobs:
   notify-telegram:
     name: 📱 Уведомление в Telegram
     needs: [build-android, build-windows]
-    if: ${{ always() && github.event_name == 'workflow_dispatch' && github.event.inputs.send_telegram == 'true' }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -308,9 +319,9 @@ jobs:
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          VERSION: ${{ github.event.inputs.version_name }}
-          TITLE: ${{ github.event.inputs.release_title }}
-          NOTES: ${{ github.event.inputs.release_notes }}
+          VERSION: ${{ github.event.inputs.version_name || github.ref_name }}
+          TITLE: ${{ github.event.inputs.release_title || format('VK Z {0}', github.ref_name) }}
+          NOTES: ${{ github.event.inputs.release_notes || 'Автоматическая сборка' }}
           REPO: ${{ github.repository }}
           APP_NAME: ${{ env.APP_NAME }}
         run: |
