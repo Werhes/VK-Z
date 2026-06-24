@@ -36,6 +36,9 @@ on:
     branches: [ "main", "release/**" ]
     tags: [ "v*" ]
 
+permissions:
+  contents: write
+
 env:
   FLUTTER_VERSION: '3.44.3'
   APP_NAME: 'VK Z'
@@ -62,10 +65,10 @@ jobs:
           flutter pub get
 
       - name: Run analyzer
-        run: flutter analyze || true
+        run: flutter analyze
 
       - name: Run tests
-        run: flutter test || true
+        run: flutter test
 
   # ============================================
   # 2. СБОРКА ANDROID
@@ -252,7 +255,7 @@ jobs:
           BODYEOF
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.version_name }}
           name: ${{ github.event.inputs.release_title }}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/vk_config.dart';
 import '../providers/music_provider.dart';
 import 'package:provider/provider.dart';
@@ -12,10 +13,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  late final WebViewController _controller;
+  WebViewController? _controller;
   bool _isLoading = false;
   bool _showWebView = false;
   String? _errorMessage;
+  bool _webViewAvailable = true;
 
   @override
   void initState() {
@@ -24,61 +26,79 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _initWebView() {
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (url) {
-            if (mounted) {
-              setState(() {
-                _isLoading = true;
-                _errorMessage = null;
-              });
-            }
-            _checkForToken(url);
-          },
-          onPageFinished: (url) {
-            if (mounted) {
-              setState(() => _isLoading = false);
-            }
-            _checkForToken(url);
-          },
-          onWebResourceError: (error) {
-            debugPrint('WebView error: ${error.description} (code: ${error.errorCode}, type: ${error.errorType})');
-            // Показываем ошибку только для критических сбоев основной страницы
-            if (error.isForMainFrame == true) {
+    try {
+      _controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (url) {
               if (mounted) {
                 setState(() {
-                  _errorMessage = 'Не удалось загрузить страницу авторизации.\n'
-                      'Проверьте подключение к интернету.';
-                  _isLoading = false;
+                  _isLoading = true;
+                  _errorMessage = null;
                 });
               }
-            }
-          },
-        ),
-      );
+              _checkForToken(url);
+            },
+            onPageFinished: (url) {
+              if (mounted) {
+                setState(() => _isLoading = false);
+              }
+              _checkForToken(url);
+            },
+            onWebResourceError: (error) {
+              debugPrint('WebView error: ${error.description} (code: ${error.errorCode}, type: ${error.errorType})');
+              if (error.isForMainFrame == true) {
+                if (mounted) {
+                  setState(() {
+                    _errorMessage = 'Не удалось загрузить страницу авторизации.\n'
+                        'Проверьте подключение к интернету.';
+                    _isLoading = false;
+                  });
+                }
+              }
+            },
+          ),
+        );
+    } catch (e) {
+      debugPrint('WebView not available on this platform: $e');
+      _webViewAvailable = false;
+    }
   }
 
   Future<void> _startAuth() async {
-    setState(() {
-      _showWebView = true;
-      _errorMessage = null;
-      _isLoading = true;
-    });
+    if (_webViewAvailable && _controller != null) {
+      // Use WebView on mobile platforms
+      setState(() {
+        _showWebView = true;
+        _errorMessage = null;
+        _isLoading = true;
+      });
 
-    try {
-      // Очищаем кэш и куки перед загрузкой
-      await _controller.clearCache();
-      await _controller.clearLocalStorage();
-      await _controller.loadRequest(Uri.parse(VkConfig.oAuthUrl));
-    } catch (e) {
-      debugPrint('WebView load error: $e');
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Ошибка загрузки: $e';
-          _isLoading = false;
-        });
+      try {
+        await _controller!.clearCache();
+        await _controller!.clearLocalStorage();
+        await _controller!.loadRequest(Uri.parse(VkConfig.oAuthUrl));
+      } catch (e) {
+        debugPrint('WebView load error: $e');
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Ошибка загрузки: $e';
+            _isLoading = false;
+          });
+        }
+      }
+    } else {
+      // Use system browser on desktop platforms
+      final uri = Uri.parse(VkConfig.oAuthUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Не удалось открыть браузер для авторизации.';
+          });
+        }
       }
     }
   }
@@ -222,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Stack(
       children: [
         // WebView
-        WebViewWidget(controller: _controller),
+        if (_controller != null) WebViewWidget(controller: _controller!),
 
         // Кнопка "Назад" сверху
         Positioned(
