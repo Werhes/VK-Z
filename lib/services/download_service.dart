@@ -74,7 +74,12 @@ class DownloadService {
     // Sanitize filename
     final safeTitle = track.title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
     final safeArtist = track.artist.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-    return '${track.ownerId}_${track.id}_${safeArtist}_${safeTitle}.mp3';
+    return [
+      track.ownerId.toString(),
+      track.id.toString(),
+      safeArtist,
+      '$safeTitle.mp3',
+    ].join('_');
   }
 
   /// Get the local file path for a track
