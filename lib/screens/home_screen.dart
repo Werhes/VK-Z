@@ -8,6 +8,8 @@ import '../widgets/playlist_card.dart';
 import '../widgets/mini_player.dart';
 import 'playlist_detail_screen.dart';
 import 'mix_screen.dart';
+import 'settings_screen.dart';
+import 'playlists_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,8 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
+  int _currentTab = 0;
 
   @override
   void initState() {
@@ -28,16 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearch(String query) {
-    context.read<MusicProvider>().search(query);
-  }
-
   void _playTrack(Track track, List<Track> queue) {
     context.read<MusicProvider>().playTrack(track, queue: queue);
   }
@@ -45,281 +36,332 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Поиск треков...',
-                  border: InputBorder.none,
-                ),
-                onChanged: _onSearch,
-              )
-            : const Text('VK Z'),
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchController.clear();
-                  _onSearch('');
-                }
-              });
-            },
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'logout') {
-                context.read<MusicProvider>().logout();
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'logout', child: Text('Выйти')),
-            ],
-          ),
-        ],
-      ),
       body: Consumer<MusicProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading && provider.tracks.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (provider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(provider.error!),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      provider.clearError();
-                      provider.loadUserMusic();
-                    },
-                    child: const Text('Повторить'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (_isSearching && _searchController.text.isNotEmpty) {
-            return _buildSearchResults(provider);
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => provider.loadUserMusic(),
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 80),
-              children: [
-                // VK Mix section
-                if (provider.mix != null) ...[
-                  _buildMixCard(provider.mix!),
-                  const SizedBox(height: 8),
-                ],
-
-                // Downloaded tracks section
-                if (provider.downloadedTracks.isNotEmpty) ...[
-                  _buildSectionHeader('Скачано'),
-                  _buildDownloadedTracksSummary(provider),
-                  const SizedBox(height: 8),
-                ],
-
-                // Recommendations section
-                if (provider.recommendations.isNotEmpty) ...[
-                  _buildSectionHeader('Рекомендации'),
-                  SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: provider.recommendations.length,
-                      itemBuilder: (context, index) {
-                        final track = provider.recommendations[index];
-                        return _buildRecommendationCard(track, provider);
-                      },
-                    ),
-                  ),
-                ],
-
-                // Playlists section
-                if (provider.playlists.isNotEmpty) ...[
-                  _buildSectionHeader('Мои плейлисты'),
-                  SizedBox(
-                    height: 180,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: provider.playlists.length,
-                      itemBuilder: (context, index) {
-                        return PlaylistCard(
-                          playlist: provider.playlists[index],
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => PlaylistDetailScreen(
-                                  playlist: provider.playlists[index],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-
-                // My tracks section
-                if (provider.tracks.isNotEmpty) ...[
-                  _buildSectionHeader('Мои треки'),
-                  ...provider.tracks.map((track) => TrackTile(
-                        track: track,
-                        onTap: () => _playTrack(track, provider.tracks),
-                        onPlay: () => _playTrack(track, provider.tracks),
-                      )),
-                ],
-              ],
-            ),
+          return IndexedStack(
+            index: _currentTab,
+            children: [
+              _MusicTab(provider: provider, playTrack: _playTrack),
+              _SearchTab(provider: provider, playTrack: _playTrack),
+              _ProfileTab(provider: provider, playTrack: _playTrack),
+            ],
           );
         },
       ),
-      bottomSheet: const MiniPlayer(),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayer(),
+          _buildBottomNav(),
+        ],
+      ),
     );
   }
 
-  Widget _buildDownloadedTracksSummary(MusicProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTap: () => _showDownloadedTracks(provider),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey[900],
-            borderRadius: BorderRadius.circular(12),
-          ),
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[950],
+        border: Border(
+          top: BorderSide(color: Colors.grey[900]!, width: 0.5),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.download_done,
-                  color: Colors.green,
-                  size: 28,
-                ),
+              _NavItem(
+                icon: Icons.library_music_outlined,
+                activeIcon: Icons.library_music,
+                label: 'Моя музыка',
+                isActive: _currentTab == 0,
+                onTap: () => setState(() => _currentTab = 0),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Скачанные треки',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${provider.downloadedTracks.length} треков',
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
+              _NavItem(
+                icon: Icons.search_outlined,
+                activeIcon: Icons.search,
+                label: 'Поиск',
+                isActive: _currentTab == 1,
+                onTap: () => setState(() => _currentTab = 1),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              _NavItem(
+                icon: Icons.person_outline,
+                activeIcon: Icons.person,
+                label: 'Профиль',
+                isActive: _currentTab == 2,
+                onTap: () => setState(() => _currentTab = 2),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  void _showDownloadedTracks(MusicProvider provider) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => _DownloadedTracksScreen(provider: provider),
-      ),
-    );
-  }
+// ============================================
+// Bottom Navigation Item
+// ============================================
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                size: 24,
+                color: isActive ? Colors.blue : Colors.grey[500],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isActive ? Colors.blue : Colors.grey[500],
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildMixCard(Mix mix) {
+// ============================================
+// TAB 1: МОЯ МУЗЫКА
+// ============================================
+class _MusicTab extends StatelessWidget {
+  final MusicProvider provider;
+  final Function(Track, List<Track>) playTrack;
+
+  const _MusicTab({required this.provider, required this.playTrack});
+
+  @override
+  Widget build(BuildContext context) {
+    if (provider.isLoading && provider.tracks.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                provider.error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                provider.clearError();
+                provider.loadUserMusic();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Повторить'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final hasContent = provider.mix != null ||
+        provider.downloadedTracks.isNotEmpty ||
+        provider.recommendations.isNotEmpty ||
+        provider.playlists.isNotEmpty ||
+        provider.tracks.isNotEmpty;
+
+    if (!provider.isLoading && !hasContent) {
+      return RefreshIndicator(
+        onRefresh: () => provider.loadUserMusic(),
+        child: ListView(
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.music_note_outlined, size: 72, color: Colors.grey[700]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Музыка загружается...',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Потяните вниз для обновления',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.loadUserMusic(),
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 16),
+        children: [
+          const SizedBox(height: 8),
+
+          // VK Mix card
+          if (provider.mix != null) ...[
+            _buildMixCard(context, provider.mix!),
+            const SizedBox(height: 8),
+          ],
+
+          // Downloaded tracks summary
+          if (provider.downloadedTracks.isNotEmpty) ...[
+            _buildDownloadsCard(context),
+            const SizedBox(height: 8),
+          ],
+
+          // Recommendations
+          if (provider.recommendations.isNotEmpty) ...[
+            _SectionHeader(title: 'Рекомендации'),
+            SizedBox(
+              height: 190,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: provider.recommendations.length,
+                itemBuilder: (context, index) {
+                  final track = provider.recommendations[index];
+                  return _RecommendationCard(
+                    track: track,
+                    onTap: () => playTrack(track, provider.recommendations),
+                  );
+                },
+              ),
+            ),
+          ],
+
+          // Playlists
+          if (provider.playlists.isNotEmpty) ...[
+            _SectionHeaderWithAction(
+              title: 'Мои плейлисты',
+              actionLabel: 'Показать все',
+              onAction: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PlaylistsScreen(),
+                  ),
+                );
+              },
+            ),
+            SizedBox(
+              height: 170,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: provider.playlists.length,
+                itemBuilder: (context, index) {
+                  final playlist = provider.playlists[index];
+                  return PlaylistCard(
+                    playlist: playlist,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => PlaylistDetailScreen(playlist: playlist),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+
+          // My tracks
+          if (provider.tracks.isNotEmpty) ...[
+            _SectionHeader(title: 'Мои треки'),
+            ...provider.tracks.map((track) => TrackTile(
+                  track: track,
+                  onTap: () => playTrack(track, provider.tracks),
+                  onPlay: () => playTrack(track, provider.tracks),
+                )),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMixCard(BuildContext context, Mix mix) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => MixScreen(mix: mix),
-          ),
+          MaterialPageRoute(builder: (context) => MixScreen(mix: mix)),
         );
       },
       child: Container(
-        height: 180,
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        height: 160,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.blue[700]!,
-              Colors.purple[700]!,
-              Colors.deepPurple[900]!,
-            ],
+            colors: [Color(0xFF1A237E), Color(0xFF4A148C), Color(0xFF0D0D2B)],
           ),
         ),
         child: Stack(
           children: [
             // Decorative circles
             Positioned(
-              right: -20,
-              top: -20,
+              right: -20, top: -20,
               child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
+                width: 120, height: 120,
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Color(0x0FFFFFFF),
                 ),
               ),
             ),
             Positioned(
-              right: 40,
-              bottom: -30,
+              right: 40, bottom: -30,
               child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
+                width: 80, height: 80,
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Color(0x0FFFFFFF),
                 ),
               ),
             ),
@@ -330,50 +372,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Icon(
-                    Icons.auto_awesome,
-                    color: Colors.yellow[400],
-                    size: 28,
-                  ),
-                  const SizedBox(height: 12),
+                  const Icon(Icons.auto_awesome, color: Colors.amber, size: 24),
+                  const SizedBox(height: 8),
                   Text(
                     mix.title,
                     style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     mix.description ?? '${mix.tracks.length} треков',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.play_arrow, size: 18, color: Colors.white),
+                        Icon(Icons.play_arrow, size: 16, color: Colors.white),
                         SizedBox(width: 4),
-                        Text(
-                          'Слушать',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        Text('Слушать', style: TextStyle(color: Colors.white, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -386,11 +410,362 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecommendationCard(Track track, MusicProvider provider) {
+  Widget _buildDownloadsCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => _DownloadedTracksScreen(provider: provider),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.download_done, color: Colors.green, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Скачано', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text('${provider.downloadedTracks.length} треков',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================
+// TAB 2: ПОИСК
+// ============================================
+class _SearchTab extends StatefulWidget {
+  final MusicProvider provider;
+  final Function(Track, List<Track>) playTrack;
+
+  const _SearchTab({required this.provider, required this.playTrack});
+
+  @override
+  State<_SearchTab> createState() => _SearchTabState();
+}
+
+class _SearchTabState extends State<_SearchTab> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _hasSearched = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() => _hasSearched = query.isNotEmpty);
+    widget.provider.search(query);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TextField(
+                controller: _searchController,
+                autofocus: false,
+                decoration: InputDecoration(
+                  hintText: 'Поиск треков, исполнителей...',
+                  hintStyle: TextStyle(color: Colors.grey[600], fontSize: 15),
+                  prefixIcon: Icon(Icons.search, color: Colors.grey[500], size: 22),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearch('');
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+                onChanged: _onSearch,
+              ),
+            ),
+          ),
+
+          // Results
+          Expanded(
+            child: _buildBody(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (!_hasSearched) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search, size: 64, color: Colors.grey[700]),
+            const SizedBox(height: 12),
+            Text('Найдите свою музыку',
+                style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+          ],
+        ),
+      );
+    }
+
+    if (widget.provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (widget.provider.searchResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off, size: 48, color: Colors.grey[700]),
+            const SizedBox(height: 12),
+            Text('Ничего не найдено',
+                style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 16),
+      itemCount: widget.provider.searchResults.length,
+      itemBuilder: (context, index) {
+        final track = widget.provider.searchResults[index];
+        return TrackTile(
+          track: track,
+          onTap: () => widget.playTrack(track, widget.provider.searchResults),
+          onPlay: () => widget.playTrack(track, widget.provider.searchResults),
+        );
+      },
+    );
+  }
+}
+
+// ============================================
+// TAB 3: ПРОФИЛЬ
+// ============================================
+class _ProfileTab extends StatelessWidget {
+  final MusicProvider provider;
+  final Function(Track, List<Track>) playTrack;
+
+  const _ProfileTab({required this.provider, required this.playTrack});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // User info
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.blue[800],
+                child: const Icon(Icons.person, color: Colors.white, size: 32),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Мой профиль',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${provider.tracks.length} треков',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Menu items
+          _MenuTile(
+            icon: Icons.settings_outlined,
+            title: 'Настройки',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
+          _MenuTile(
+            icon: Icons.download_outlined,
+            title: 'Скачанные треки',
+            trailing: provider.downloadedTracks.isNotEmpty
+                ? Text('${provider.downloadedTracks.length}',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14))
+                : null,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => _DownloadedTracksScreen(provider: provider),
+                ),
+              );
+            },
+          ),
+          _MenuTile(
+            icon: Icons.logout,
+            title: 'Выйти',
+            titleColor: Colors.red[400],
+            iconColor: Colors.red[400],
+            onTap: () {
+              provider.logout();
+              Navigator.of(context).pushReplacementNamed('/login');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? titleColor;
+  final Color? iconColor;
+
+  const _MenuTile({
+    required this.icon,
+    required this.title,
+    this.trailing,
+    this.onTap,
+    this.titleColor,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: iconColor ?? Colors.grey[400], size: 24),
+      title: Text(title, style: TextStyle(color: titleColor ?? Colors.white, fontSize: 15)),
+      trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+      onTap: onTap,
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+}
+
+// ============================================
+// SHARED WIDGETS
+// ============================================
+class _SectionHeader extends StatelessWidget {
+  final String title;
+
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _SectionHeaderWithAction extends StatelessWidget {
+  final String title;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _SectionHeaderWithAction({
+    required this.title,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: onAction,
+            child: Text(
+              actionLabel,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.blue,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendationCard extends StatelessWidget {
+  final Track track;
+  final VoidCallback onTap;
+
+  const _RecommendationCard({required this.track, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _playTrack(track, provider.recommendations),
+      onTap: onTap,
       child: Container(
-        width: 150,
+        width: 140,
         margin: const EdgeInsets.only(right: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,63 +773,30 @@ class _HomeScreenState extends State<HomeScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                width: 150,
-                height: 150,
+                width: 140,
+                height: 140,
                 color: Colors.grey[900],
                 child: track.albumArtUrl != null
-                    ? Image.network(
-                        track.albumArtUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.music_note, size: 48),
-                      )
-                    : const Icon(Icons.music_note, size: 48),
+                    ? Image.network(track.albumArtUrl!, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.music_note, size: 40))
+                    : const Icon(Icons.music_note, size: 40),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              track.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-            Text(
-              track.artist,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
+            const SizedBox(height: 6),
+            Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+            Text(track.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.grey, fontSize: 11)),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildSearchResults(MusicProvider provider) {
-    if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (provider.searchResults.isEmpty) {
-      return const Center(child: Text('Ничего не найдено'));
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80),
-      itemCount: provider.searchResults.length,
-      itemBuilder: (context, index) {
-        final track = provider.searchResults[index];
-        return TrackTile(
-          track: track,
-          onTap: () => _playTrack(track, provider.searchResults),
-          onPlay: () => _playTrack(track, provider.searchResults),
-        );
-      },
-    );
-  }
 }
 
-/// Full screen showing all downloaded tracks
+// ============================================
+// DOWNLOADED TRACKS SCREEN
+// ============================================
 class _DownloadedTracksScreen extends StatelessWidget {
   final MusicProvider provider;
 
@@ -483,34 +825,20 @@ class _DownloadedTracksScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.download_outlined,
-                    size: 64,
-                    color: Colors.grey[600],
-                  ),
+                  Icon(Icons.download_outlined, size: 64, color: Colors.grey[600]),
                   const SizedBox(height: 16),
-                  Text(
-                    'Нет скачанных треков',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[400],
-                    ),
-                  ),
+                  Text('Нет скачанных треков',
+                      style: TextStyle(fontSize: 18, color: Colors.grey[400])),
                   const SizedBox(height: 8),
-                  Text(
-                    'Скачайте треки, чтобы слушать офлайн',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
+                  Text('Скачайте треки, чтобы слушать офлайн',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 ],
               ),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
+            padding: const EdgeInsets.only(bottom: 16),
             itemCount: provider.downloadedTracks.length,
             itemBuilder: (context, index) {
               final track = provider.downloadedTracks[index];

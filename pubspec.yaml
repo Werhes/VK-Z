@@ -51,7 +51,7 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
   windows:
     generate: true
     icon_size: 48

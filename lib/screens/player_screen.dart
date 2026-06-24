@@ -57,12 +57,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Удалить трек'),
-          content: Text('Удалить "${track.title}" из загрузок?'),
+          backgroundColor: const Color(0xFF1A1A2E),
+          title: const Text('Удалить трек', style: TextStyle(color: Colors.white)),
+          content: Text(
+            'Удалить "${track.title}" из загрузок?',
+            style: const TextStyle(color: Colors.white70),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Отмена'),
+              child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -98,24 +102,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.keyboard_arrow_down),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            title: const Text(
-              'Сейчас играет',
-              style: TextStyle(fontSize: 16),
-            ),
-            centerTitle: true,
-            actions: [
-              // Download button in app bar
-              _buildAppBarDownloadButton(),
-            ],
-          ),
-          extendBodyBehindAppBar: true,
           body: Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -132,76 +118,105 @@ class _PlayerScreenState extends State<PlayerScreen> {
             child: SafeArea(
               child: Column(
                 children: [
-                  const Spacer(),
+                  // Top bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.keyboard_arrow_down, size: 32),
+                          onPressed: () => Navigator.of(context).pop(),
+                          color: Colors.white70,
+                        ),
+                        const Spacer(),
+                        const Text(
+                          'Сейчас играет',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Download button
+                        _buildDownloadButton(),
+                      ],
+                    ),
+                  ),
+
+                  const Spacer(flex: 1),
+
                   // Album art
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                       child: AspectRatio(
                         aspectRatio: 1,
                         child: Container(
-                          constraints: const BoxConstraints(maxHeight: 320),
+                          constraints: const BoxConstraints(maxHeight: 340),
                           color: Colors.grey[900],
                           child: track.albumArtUrl != null
                               ? Image.network(
                                   track.albumArtUrl!,
                                   fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) =>
-                                          _defaultArt(),
+                                  errorBuilder: (_, __, ___) => _defaultArt(),
                                 )
                               : _defaultArt(),
                         ),
                       ),
                     ),
                   ),
-                  const Spacer(),
+
+                  const Spacer(flex: 1),
+
                   // Track info
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
                                 track.title,
                                 style: const TextStyle(
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            // Offline indicator
-                            if (_isDownloaded)
-                              const Padding(
-                                padding: EdgeInsets.only(left: 8),
-                                child: Icon(
-                                  Icons.offline_pin,
-                                  color: Colors.green,
-                                  size: 20,
+                              const SizedBox(height: 4),
+                              Text(
+                                track.artist,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.grey[400],
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          track.artist,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[400],
+                            ],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // Like button (placeholder)
+                        IconButton(
+                          icon: Icon(
+                            Icons.favorite_outline,
+                            color: Colors.grey[400],
+                            size: 26,
+                          ),
+                          onPressed: () {},
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 16),
+
                   // Progress bar
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -212,10 +227,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             activeTrackColor: Colors.white,
                             inactiveTrackColor: Colors.grey[800],
                             thumbColor: Colors.white,
-                            overlayColor: Colors.white.withValues(alpha: 0.2),
+                            overlayColor: Colors.white.withValues(alpha: 0.15),
                             trackHeight: 3,
                             thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 6,
+                              enabledThumbRadius: 5,
                             ),
                           ),
                           child: Slider(
@@ -225,9 +240,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 : 0,
                             onChanged: (value) {
                               final position = Duration(
-                                seconds:
-                                    (value * provider.duration.inSeconds)
-                                        .toInt(),
+                                seconds: (value * provider.duration.inSeconds).toInt(),
                               );
                               provider.seek(position);
                             },
@@ -240,17 +253,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             children: [
                               Text(
                                 _formatDuration(provider.position),
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
+                                style: const TextStyle(color: Colors.grey, fontSize: 12),
                               ),
                               Text(
                                 _formatDuration(provider.duration),
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
+                                style: const TextStyle(color: Colors.grey, fontSize: 12),
                               ),
                             ],
                           ),
@@ -258,56 +265,114 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Controls
+
+                  const SizedBox(height: 8),
+
+                  // Main controls
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // Shuffle
                       IconButton(
-                        icon: const Icon(Icons.shuffle, size: 28),
+                        icon: const Icon(Icons.shuffle, size: 24),
                         onPressed: () {},
                         color: Colors.grey[400],
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 8),
+                      // Previous
                       IconButton(
-                        icon: const Icon(Icons.skip_previous, size: 36),
+                        icon: const Icon(Icons.skip_previous, size: 32),
                         onPressed: provider.hasPrevious
                             ? () => provider.playPrevious()
                             : null,
+                        color: provider.hasPrevious ? Colors.white : Colors.grey[700],
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 8),
+                      // Play/Pause
                       Container(
+                        width: 64,
+                        height: 64,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.white,
                         ),
                         child: IconButton(
                           icon: Icon(
-                            provider.isPlaying
-                                ? Icons.pause
-                                : Icons.play_arrow,
-                            size: 40,
+                            provider.isPlaying ? Icons.pause : Icons.play_arrow,
+                            size: 36,
                             color: Colors.black,
                           ),
                           onPressed: () => provider.togglePlayPause(),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 8),
+                      // Next
                       IconButton(
-                        icon: const Icon(Icons.skip_next, size: 36),
+                        icon: const Icon(Icons.skip_next, size: 32),
                         onPressed: provider.hasNext
                             ? () => provider.playNext()
                             : null,
+                        color: provider.hasNext ? Colors.white : Colors.grey[700],
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 8),
+                      // Repeat
                       IconButton(
-                        icon: const Icon(Icons.repeat, size: 28),
+                        icon: const Icon(Icons.repeat, size: 24),
                         onPressed: () {},
                         color: Colors.grey[400],
                       ),
                     ],
                   ),
-                  const Spacer(),
+
+                  const SizedBox(height: 24),
+
+                  // Bottom actions row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Add to playlist
+                        IconButton(
+                          icon: Icon(
+                            Icons.playlist_add,
+                            color: Colors.grey[400],
+                            size: 24,
+                          ),
+                          onPressed: () {},
+                        ),
+                        // Volume
+                        IconButton(
+                          icon: Icon(
+                            Icons.volume_up_outlined,
+                            color: Colors.grey[400],
+                            size: 24,
+                          ),
+                          onPressed: () {},
+                        ),
+                        // Queue
+                        IconButton(
+                          icon: Icon(
+                            Icons.queue_music_outlined,
+                            color: Colors.grey[400],
+                            size: 24,
+                          ),
+                          onPressed: () {},
+                        ),
+                        // Offline indicator
+                        if (_isDownloaded)
+                          const Icon(
+                            Icons.offline_pin,
+                            color: Colors.green,
+                            size: 24,
+                          )
+                        else
+                          const SizedBox(width: 24),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -317,14 +382,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  Widget _buildAppBarDownloadButton() {
+  Widget _buildDownloadButton() {
     if (_downloadProgress != null &&
         _downloadProgress!.status == DownloadStatus.downloading) {
       return Padding(
         padding: const EdgeInsets.all(12),
         child: SizedBox(
-          width: 24,
-          height: 24,
+          width: 22,
+          height: 22,
           child: CircularProgressIndicator(
             value: _downloadProgress!.progress,
             strokeWidth: 2,
@@ -338,6 +403,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       icon: Icon(
         _isDownloaded ? Icons.cloud_done : Icons.cloud_download_outlined,
         color: _isDownloaded ? Colors.green : Colors.white70,
+        size: 24,
       ),
       onPressed: _handleDownload,
       tooltip: _isDownloaded ? 'Удалить из загрузок' : 'Скачать',
@@ -347,7 +413,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget _defaultArt() {
     return Container(
       color: Colors.grey[900],
-      child: const Icon(Icons.music_note, size: 80),
+      child: const Icon(Icons.music_note, size: 80, color: Colors.grey),
     );
   }
 
