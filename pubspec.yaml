@@ -1,0 +1,52 @@
+name: vk_z
+description: "VK Z - VK Music client for Flutter"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # HTTP client
+  http: ^1.2.1
+
+  # WebView for VK OAuth
+  webview_flutter: ^4.7.0
+
+  # State management
+  provider: ^6.1.2
+
+  # Audio playback
+  just_audio: ^0.9.39
+
+  # Cached network images
+  cached_network_image: ^3.3.1
+
+  # URL launcher
+  url_launcher: ^6.2.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  windows:
+    generate: true
+    icon_size: 48
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#4A90D9"
+  adaptive_icon_foreground: "assets/icon.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
