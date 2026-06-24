@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/track.dart';
 import '../models/playlist.dart';
 import '../models/mix.dart';
+import '../models/mix_settings.dart';
 import 'vk_config.dart';
 
 class VkApiService {
@@ -48,7 +48,8 @@ class VkApiService {
         _accessToken = token;
         _userId = userId;
         _deviceId = deviceId;
-        debugPrint('Session restored: token=${token.substring(0, 10)}..., userId=$userId');
+        debugPrint(
+            'Session restored: token=${token.substring(0, 10)}..., userId=$userId');
         return true;
       }
     } catch (e) {
@@ -87,31 +88,29 @@ class VkApiService {
     }
   }
 
-  /// Generate a random device ID (like VK Android App does)
-  String _generateDeviceId() {
-    final random = Random();
-    final bytes = List.generate(16, (_) => random.nextInt(256));
-    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
-  }
-
   /// Get or generate device ID
   String get _deviceIdValue {
-    _deviceId ??= _generateDeviceId();
+    _deviceId ??= VkConfig.generateDeviceId();
     return _deviceId!;
   }
 
-  /// Make an HTTP GET request with VK Android App headers
-  Future<http.Response> _makeRequest(Uri uri) async {
-    final request = http.Request('GET', uri);
-    
-    // Add VK Android App headers (required to bypass audio.* restrictions)
+  /// Make an HTTP POST request with VK Android App headers
+  /// Music-M uses POST (not GET) for all API calls via VkNet's RestClient.PostAsync
+  Future<http.Response> _makeRequest(Uri uri, Map<String, String> bodyParams) async {
+    final request = http.Request('POST', uri);
+
+    // Add VK Android App headers (from Music-M / VkNet.AudioBypassService)
     request.headers.addAll(VkConfig.extraHeaders);
-    
+    request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+
+    request.bodyFields = bodyParams;
+
     final streamedResponse = await request.send();
     return http.Response.fromStream(streamedResponse);
   }
 
   /// Direct API call with VK Android App headers and device_id
+  /// Music-M style: POST request with all params in body
   Future<Map<String, dynamic>> _call({
     required String method,
     Map<String, String>? params,
@@ -120,18 +119,18 @@ class VkApiService {
       throw Exception('Not authorized');
     }
 
-    final queryParams = <String, String>{
+    final bodyParams = <String, String>{
       'access_token': _accessToken!,
       'v': VkConfig.apiVersion,
+      'lang': 'ru',
       'device_id': _deviceIdValue,
       ...?params,
     };
 
-    final uri = Uri.parse('${VkConfig.apiBaseUrl}/$method')
-        .replace(queryParameters: queryParams);
+    final uri = Uri.parse('${VkConfig.apiBaseUrl}/$method');
 
     debugPrint('VK API call: $method');
-    final response = await _makeRequest(uri);
+    final response = await _makeRequest(uri, bodyParams);
 
     if (response.statusCode != 200) {
       throw Exception('HTTP ${response.statusCode}: ${response.body}');
@@ -142,13 +141,18 @@ class VkApiService {
     // Check for API errors
     if (data.containsKey('error')) {
       final error = data['error'] as Map<String, dynamic>;
-      throw Exception('VK API Error ${error['error_code']}: ${error['error_msg']}');
+      throw Exception(
+          'VK API Error ${error['error_code']}: ${error['error_msg']}');
     }
 
     return data;
   }
 
-  // Get user's audio catalog
+  // ==========================================
+  // Catalog methods (Music-M uses catalog.* namespace)
+  // ==========================================
+
+  /// Get audio catalog - Music-M uses catalog.getAudio (NOT audio.getCatalog)
   Future<Map<String, dynamic>> getCatalog({
     String? userId,
   }) async {
@@ -157,8 +161,8 @@ class VkApiService {
     };
     if (userId != null) params['user_id'] = userId;
 
-    final data = await _call(method: 'audio.getCatalog', params: params);
-    
+    final data = await _call(method: 'catalog.getAudio', params: params);
+
     // Debug: log the catalog structure
     try {
       debugPrint('Catalog response keys: ${data.keys.join(', ')}');
@@ -187,11 +191,42 @@ class VkApiService {
     } catch (e) {
       debugPrint('Debug catalog error: $e');
     }
-    
+
     return data;
   }
 
-  // Get user's audio tracks
+  /// Get catalog section - Music-M uses catalog.getSection
+  Future<Map<String, dynamic>> getSection({
+    required String sectionId,
+    String? startFrom,
+  }) async {
+    final params = <String, String>{
+      'extended': '1',
+      'section_id': sectionId,
+      'need_blocks': '1',
+    };
+    if (startFrom != null) params['start_from'] = startFrom;
+
+    return await _call(method: 'catalog.getSection', params: params);
+  }
+
+  /// Get block items - Music-M uses catalog.getBlockItems
+  Future<Map<String, dynamic>> getBlockItems({
+    required String blockId,
+  }) async {
+    final params = <String, String>{
+      'extended': '1',
+      'block_id': blockId,
+    };
+
+    return await _call(method: 'catalog.getBlockItems', params: params);
+  }
+
+  // ==========================================
+  // Audio methods
+  // ==========================================
+
+  /// Get user's audio tracks - Music-M uses audio.get
   Future<List<Track>> getTracks({
     int? ownerId,
     int offset = 0,
@@ -225,7 +260,7 @@ class VkApiService {
     try {
       final catalog = await getCatalog();
       final responseData = catalog['response'];
-      
+
       if (responseData == null) {
         debugPrint('Catalog response is null');
         return [];
@@ -236,14 +271,12 @@ class VkApiService {
       if (responseData is Map<String, dynamic>) {
         sections = responseData['sections'] as List<dynamic>? ?? [];
       } else if (responseData is List<dynamic>) {
-        // Some API versions return a list directly
         sections = responseData;
       }
 
       debugPrint('Catalog sections count: ${sections.length}');
 
       if (sections.isEmpty) {
-        // Try to find tracks directly in response
         return _extractTracksFromResponse(responseData);
       }
 
@@ -252,10 +285,9 @@ class VkApiService {
         if (section is! Map<String, dynamic>) continue;
         final sectionId = _getStringValue(section, 'id');
         final sectionTitle = _getStringValue(section, 'title');
-        
+
         debugPrint('Section: id=$sectionId, title=$sectionTitle');
 
-        // Check various possible field names for tracks
         final tracks = _extractTracksFromSection(section);
         if (tracks.isNotEmpty && _isUserMusicSection(sectionId, sectionTitle)) {
           debugPrint('Found ${tracks.length} tracks in section: $sectionId');
@@ -289,25 +321,24 @@ class VkApiService {
   bool _isUserMusicSection(String sectionId, String sectionTitle) {
     final lowerId = sectionId.toLowerCase();
     final lowerTitle = sectionTitle.toLowerCase();
-    
-    return lowerId.contains('my') || 
-           lowerId.contains('recent') || 
-           lowerId.contains('favorite') ||
-           lowerId.contains('likes') ||
-           lowerId.contains('own') ||
-           lowerId.contains('user') ||
-           lowerTitle.contains('моя') ||
-           lowerTitle.contains('мои') ||
-           lowerTitle.contains('недав') ||
-           lowerTitle.contains('любим') ||
-           lowerTitle.contains('избран');
+
+    return lowerId.contains('my') ||
+        lowerId.contains('recent') ||
+        lowerId.contains('favorite') ||
+        lowerId.contains('likes') ||
+        lowerId.contains('own') ||
+        lowerId.contains('user') ||
+        lowerTitle.contains('моя') ||
+        lowerTitle.contains('мои') ||
+        lowerTitle.contains('недав') ||
+        lowerTitle.contains('любим') ||
+        lowerTitle.contains('избран');
   }
 
   /// Extract tracks from a section, trying multiple possible field names
   List<Track> _extractTracksFromSection(Map<String, dynamic> section) {
-    // Try different possible field names for tracks
     final possibleFields = ['tracks', 'items', 'audios', 'music', 'list', 'data'];
-    
+
     for (final field in possibleFields) {
       final tracks = section[field];
       if (tracks is List && tracks.isNotEmpty) {
@@ -318,7 +349,7 @@ class VkApiService {
         if (result.isNotEmpty) return result;
       }
     }
-    
+
     return [];
   }
 
@@ -352,7 +383,11 @@ class VkApiService {
     return '';
   }
 
-  // Get playlists from catalog
+  // ==========================================
+  // Playlists
+  // ==========================================
+
+  /// Get playlists - Music-M uses audio.getPlaylists
   Future<List<Playlist>> getPlaylists({
     int? ownerId,
     int offset = 0,
@@ -386,7 +421,7 @@ class VkApiService {
     try {
       final catalog = await getCatalog();
       final responseData = catalog['response'];
-      
+
       if (responseData == null) return [];
 
       List<dynamic> sections = [];
@@ -401,7 +436,6 @@ class VkApiService {
       for (final section in sections) {
         if (section is! Map<String, dynamic>) continue;
 
-        // Try different field names for playlists/albums
         for (final field in ['playlists', 'albums', 'collections', 'lists']) {
           final items = section[field] as List? ?? [];
           for (final item in items) {
@@ -422,10 +456,11 @@ class VkApiService {
     }
   }
 
-  // Get tracks from a specific playlist
+  /// Get tracks from a specific playlist - Music-M uses execute.getPlaylist
   Future<List<Track>> getPlaylistTracks({
     required int playlistId,
     required int ownerId,
+    String? accessKey,
     int offset = 0,
     int count = 100,
   }) async {
@@ -435,20 +470,30 @@ class VkApiService {
         'owner_id': ownerId.toString(),
         'offset': offset.toString(),
         'count': count.toString(),
+        'audio_count': count.toString(),
+        'need_playlist': '1',
+        'func_v': '10',
+        'need_owner': '1',
       };
-      final data = await _call(method: 'audio.getPlaylistTracks', params: params);
+      if (accessKey != null) params['access_key'] = accessKey;
+
+      final data = await _call(method: 'execute.getPlaylist', params: params);
       final items = data['response']?['items'] as List? ?? [];
       return items
           .whereType<Map<String, dynamic>>()
           .map((e) => Track.fromJson(e))
           .toList();
     } catch (e) {
-      debugPrint('audio.getPlaylistTracks failed: $e');
+      debugPrint('execute.getPlaylist failed: $e');
       return [];
     }
   }
 
-  // Search tracks
+  // ==========================================
+  // Search - Music-M uses catalog.getAudioSearch
+  // ==========================================
+
+  /// Search tracks - Music-M uses catalog.getAudioSearch (NOT audio.search)
   Future<List<Track>> searchTracks({
     required String query,
     int offset = 0,
@@ -456,25 +501,56 @@ class VkApiService {
   }) async {
     try {
       final params = <String, String>{
+        'extended': '1',
         'q': query,
         'offset': offset.toString(),
         'count': count.toString(),
-        'autocomplete': '1',
-        'sort': '2',
       };
-      final data = await _call(method: 'audio.search', params: params);
-      final items = data['response']?['items'] as List? ?? [];
-      return items
-          .whereType<Map<String, dynamic>>()
-          .map((e) => Track.fromJson(e))
-          .toList();
+
+      final data =
+          await _call(method: 'catalog.getAudioSearch', params: params);
+      final responseData = data['response'];
+
+      if (responseData == null) return [];
+
+      // Try to extract tracks from the response
+      List<dynamic> sections = [];
+      if (responseData is Map<String, dynamic>) {
+        sections = responseData['sections'] as List<dynamic>? ?? [];
+      } else if (responseData is List<dynamic>) {
+        sections = responseData;
+      }
+
+      // Search results are typically in the first section with tracks
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final tracks = _extractTracksFromSection(section);
+        if (tracks.isNotEmpty) return tracks;
+      }
+
+      // Fallback: try items directly
+      if (responseData is Map<String, dynamic>) {
+        final items = responseData['items'] as List? ?? [];
+        if (items.isNotEmpty) {
+          return items
+              .whereType<Map<String, dynamic>>()
+              .map((e) => Track.fromJson(e))
+              .toList();
+        }
+      }
+
+      return [];
     } catch (e) {
-      debugPrint('audio.search failed: $e');
+      debugPrint('catalog.getAudioSearch failed: $e');
       return [];
     }
   }
 
-  // Get recommended tracks
+  // ==========================================
+  // Recommendations
+  // ==========================================
+
+  /// Get recommended tracks - Music-M uses audio.getRecommendations
   Future<List<Track>> getRecommendations({
     int offset = 0,
     int count = 50,
@@ -484,7 +560,8 @@ class VkApiService {
         'offset': offset.toString(),
         'count': count.toString(),
       };
-      final data = await _call(method: 'audio.getRecommendations', params: params);
+      final data =
+          await _call(method: 'audio.getRecommendations', params: params);
       final items = data['response']?['items'] as List? ?? [];
       if (items.isNotEmpty) {
         return items
@@ -493,10 +570,10 @@ class VkApiService {
             .toList();
       }
     } catch (e) {
-      debugPrint('audio.getRecommendations failed, falling back to catalog: $e');
+      debugPrint(
+          'audio.getRecommendations failed, falling back to catalog: $e');
     }
 
-    // Fallback: extract recommendations from catalog
     return _getRecommendationsFromCatalog();
   }
 
@@ -505,7 +582,7 @@ class VkApiService {
     try {
       final catalog = await getCatalog();
       final responseData = catalog['response'];
-      
+
       if (responseData == null) return [];
 
       List<dynamic> sections = [];
@@ -520,8 +597,8 @@ class VkApiService {
         final sectionId = _getStringValue(section, 'id').toLowerCase();
         final sectionTitle = _getStringValue(section, 'title').toLowerCase();
 
-        if (sectionId.contains('recommend') || 
-            sectionId.contains('discover') || 
+        if (sectionId.contains('recommend') ||
+            sectionId.contains('discover') ||
             sectionId.contains('popular') ||
             sectionId.contains('new') ||
             sectionTitle.contains('рекоменд') ||
@@ -529,7 +606,8 @@ class VkApiService {
             sectionTitle.contains('новин')) {
           final tracks = _extractTracksFromSection(section);
           if (tracks.isNotEmpty) {
-            debugPrint('Found ${tracks.length} recommendations in section: $sectionId');
+            debugPrint(
+                'Found ${tracks.length} recommendations in section: $sectionId');
             return tracks;
           }
         }
@@ -542,54 +620,97 @@ class VkApiService {
     }
   }
 
-  // Get popular tracks
-  Future<List<Track>> getPopular({
-    int offset = 0,
-    int count = 50,
-  }) async {
+  // ==========================================
+  // Mix Settings - Music-M uses audio.getStreamMixSettings
+  // ==========================================
+
+  /// Get VK Mix settings - Music-M uses audio.getStreamMixSettings
+  Future<MixSettingsRoot?> getStreamMixSettings(String mixId) async {
     try {
       final params = <String, String>{
-        'offset': offset.toString(),
-        'count': count.toString(),
+        'device_id': _deviceIdValue,
+        'mix_id': mixId,
       };
-      final data = await _call(method: 'audio.getPopular', params: params);
-      final items = data['response'] as List? ?? [];
-      return items
-          .whereType<Map<String, dynamic>>()
-          .map((e) => Track.fromJson(e))
-          .toList();
+
+      final data = await _call(
+          method: 'audio.getStreamMixSettings', params: params);
+
+      if (data['response'] != null) {
+        final response = data['response'];
+        if (response is Map<String, dynamic>) {
+          return MixSettingsRoot.fromJson(response);
+        }
+      }
+
+      return null;
     } catch (e) {
-      debugPrint('getPopular failed: $e');
-      return [];
+      debugPrint('audio.getStreamMixSettings failed: $e');
+      return null;
     }
   }
 
-  // Get audio by ID (for getting direct audio URLs)
-  Future<List<Track>> getAudioById({
-    required List<String> audioIds,
-  }) async {
-    try {
-      final params = <String, String>{
-        'audios': audioIds.join(','),
-      };
-      final data = await _call(method: 'audio.getById', params: params);
-      final items = data['response'] as List? ?? [];
-      return items
-          .whereType<Map<String, dynamic>>()
-          .map((e) => Track.fromJson(e))
-          .toList();
-    } catch (e) {
-      debugPrint('getAudioById failed: $e');
-      return [];
-    }
-  }
+  // ==========================================
+  // Mix - Music-M uses audio.getStreamMixAudios
+  // ==========================================
 
-  // Get VK Mix (personalized mix from catalog)
+  /// Get VK Mix - Music-M uses audio.getStreamMixAudios
   Future<Mix?> getMix() async {
     try {
-      final data = await getCatalog();
-      final responseData = data['response'];
-      
+      // First try to get mix from catalog
+      final catalog = await getCatalog();
+      final mixFromCatalog = _getMixFromCatalogData(catalog);
+      if (mixFromCatalog != null) return mixFromCatalog;
+
+      // Fallback: try audio.getStreamMixAudios
+      try {
+        final params = <String, String>{
+          'mix_id': 'common',
+          'append': '0',
+          'count': '50',
+        };
+        final data = await _call(
+            method: 'audio.getStreamMixAudios', params: params);
+        final items = data['response'] as List? ?? [];
+        if (items.isNotEmpty) {
+          final tracks = items
+              .whereType<Map<String, dynamic>>()
+              .map((e) => Track.fromJson(e))
+              .toList();
+          if (tracks.isNotEmpty) {
+            return Mix(
+              id: 'stream_mix',
+              title: 'Мой Микс',
+              tracks: tracks,
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('audio.getStreamMixAudios failed: $e');
+      }
+
+      // Final fallback: create mix from catalog tracks
+      final allTracks = await _getTracksFromCatalog();
+      if (allTracks.length >= 5) {
+        allTracks.shuffle();
+        return Mix(
+          id: 'my_music_mix',
+          title: 'Мой Микс',
+          description: 'Ваши треки в случайном порядке',
+          tracks: allTracks.take(30).toList(),
+        );
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('getMix failed: $e');
+      return null;
+    }
+  }
+
+  /// Extract mix from catalog data
+  Mix? _getMixFromCatalogData(Map<String, dynamic> catalog) {
+    try {
+      final responseData = catalog['response'];
       if (responseData == null) return null;
 
       List<dynamic> sections = [];
@@ -598,18 +719,17 @@ class VkApiService {
       } else if (responseData is List<dynamic>) {
         sections = responseData;
       }
-      
-      // Look for mix section in catalog
+
       for (final section in sections) {
         if (section is! Map<String, dynamic>) continue;
         final sectionId = _getStringValue(section, 'id').toLowerCase();
         final sectionTitle = _getStringValue(section, 'title');
-        
-        if (sectionId.contains('mix') || 
+
+        if (sectionId.contains('mix') ||
             sectionId.contains('recommended') ||
             sectionTitle.toLowerCase().contains('микс')) {
           final tracks = _extractTracksFromSection(section);
-          
+
           if (tracks.isNotEmpty) {
             return Mix(
               id: sectionId,
@@ -621,22 +741,10 @@ class VkApiService {
           }
         }
       }
-      
-      // Fallback: create mix from catalog tracks
-      final allTracks = await _getTracksFromCatalog();
-      if (allTracks.length >= 5) {
-        allTracks.shuffle();
-        return Mix(
-          id: 'my_music_mix',
-          title: 'Мой Микс',
-          description: 'Ваши треки в случайном порядке',
-          tracks: allTracks.take(30).toList(),
-        );
-      }
-      
+
       return null;
     } catch (e) {
-      debugPrint('getMix failed: $e');
+      debugPrint('getMixFromCatalogData failed: $e');
       return null;
     }
   }
@@ -657,22 +765,48 @@ class VkApiService {
   }
 
   // ==========================================
+  // Other methods
+  // ==========================================
+
+  /// Get audio by ID
+  Future<List<Track>> getAudioById({
+    required List<String> audioIds,
+  }) async {
+    try {
+      final params = <String, String>{
+        'audios': audioIds.join(','),
+      };
+      final data = await _call(method: 'audio.getById', params: params);
+      final items = data['response'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (e) {
+      debugPrint('getAudioById failed: $e');
+      return [];
+    }
+  }
+
+  // ==========================================
   // Methods that accept pre-fetched catalog data
-  // (to avoid fetching catalog multiple times)
   // ==========================================
 
   /// Extract tracks from already-fetched catalog data
-  Future<List<Track>> getTracksFromCatalogData(Map<String, dynamic> catalog) async {
+  Future<List<Track>> getTracksFromCatalogData(
+      Map<String, dynamic> catalog) async {
     return _getTracksFromCatalogData(catalog);
   }
 
   /// Extract playlists from already-fetched catalog data
-  Future<List<Playlist>> getPlaylistsFromCatalogData(Map<String, dynamic> catalog) async {
+  Future<List<Playlist>> getPlaylistsFromCatalogData(
+      Map<String, dynamic> catalog) async {
     return _getPlaylistsFromCatalogData(catalog);
   }
 
   /// Extract recommendations from already-fetched catalog data
-  Future<List<Track>> getRecommendationsFromCatalogData(Map<String, dynamic> catalog) async {
+  Future<List<Track>> getRecommendationsFromCatalogData(
+      Map<String, dynamic> catalog) async {
     return _getRecommendationsFromCatalogData(catalog);
   }
 
@@ -682,7 +816,8 @@ class VkApiService {
   }
 
   /// Internal: extract tracks from catalog data
-  Future<List<Track>> _getTracksFromCatalogData(Map<String, dynamic> catalog) async {
+  Future<List<Track>> _getTracksFromCatalogData(
+      Map<String, dynamic> catalog) async {
     try {
       final responseData = catalog['response'];
       if (responseData == null) {
@@ -701,7 +836,6 @@ class VkApiService {
         return _extractTracksFromResponse(responseData);
       }
 
-      // First pass: look for sections with user's music
       for (final section in sections) {
         if (section is! Map<String, dynamic>) continue;
         final sectionId = _getStringValue(section, 'id');
@@ -713,7 +847,6 @@ class VkApiService {
         }
       }
 
-      // Second pass: collect all unique tracks from all sections
       final allTracks = <Track>[];
       final seenIds = <String>{};
       for (final section in sections) {
@@ -735,7 +868,8 @@ class VkApiService {
   }
 
   /// Internal: extract playlists from catalog data
-  Future<List<Playlist>> _getPlaylistsFromCatalogData(Map<String, dynamic> catalog) async {
+  Future<List<Playlist>> _getPlaylistsFromCatalogData(
+      Map<String, dynamic> catalog) async {
     try {
       final responseData = catalog['response'];
       if (responseData == null) return [];
@@ -773,7 +907,8 @@ class VkApiService {
   }
 
   /// Internal: extract recommendations from catalog data
-  Future<List<Track>> _getRecommendationsFromCatalogData(Map<String, dynamic> catalog) async {
+  Future<List<Track>> _getRecommendationsFromCatalogData(
+      Map<String, dynamic> catalog) async {
     try {
       final responseData = catalog['response'];
       if (responseData == null) return [];
@@ -808,61 +943,6 @@ class VkApiService {
     } catch (e) {
       debugPrint('Failed to extract recommendations from catalog data: $e');
       return [];
-    }
-  }
-
-  /// Internal: extract mix from catalog data
-  Future<Mix?> _getMixFromCatalogData(Map<String, dynamic> catalog) async {
-    try {
-      final responseData = catalog['response'];
-      if (responseData == null) return null;
-
-      List<dynamic> sections = [];
-      if (responseData is Map<String, dynamic>) {
-        sections = responseData['sections'] as List<dynamic>? ?? [];
-      } else if (responseData is List<dynamic>) {
-        sections = responseData;
-      }
-
-      // Look for mix section in catalog
-      for (final section in sections) {
-        if (section is! Map<String, dynamic>) continue;
-        final sectionId = _getStringValue(section, 'id').toLowerCase();
-        final sectionTitle = _getStringValue(section, 'title');
-
-        if (sectionId.contains('mix') ||
-            sectionId.contains('recommended') ||
-            sectionTitle.toLowerCase().contains('микс')) {
-          final tracks = _extractTracksFromSection(section);
-
-          if (tracks.isNotEmpty) {
-            return Mix(
-              id: sectionId,
-              title: section['title'] as String? ?? 'Микс',
-              description: section['subtitle'] as String?,
-              coverUrl: _extractSectionCover(section),
-              tracks: tracks,
-            );
-          }
-        }
-      }
-
-      // Fallback: create mix from catalog tracks
-      final allTracks = await _getTracksFromCatalogData(catalog);
-      if (allTracks.length >= 5) {
-        allTracks.shuffle();
-        return Mix(
-          id: 'my_music_mix',
-          title: 'Мой Микс',
-          description: 'Ваши треки в случайном порядке',
-          tracks: allTracks.take(30).toList(),
-        );
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('getMixFromCatalogData failed: $e');
-      return null;
     }
   }
 }

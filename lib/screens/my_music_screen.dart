@@ -3,7 +3,7 @@ import '../providers/music_provider.dart';
 import '../models/track.dart';
 import '../widgets/track_tile.dart';
 
-/// Экран "Моя музыка" — список любимых треков пользователя.
+/// Экран "Библиотека" — список любимых треков пользователя.
 /// Скопирован из FlutterVK (MyMusicBlock + MusicCategory).
 class MyMusicScreen extends StatelessWidget {
   final MusicProvider provider;
@@ -23,7 +23,7 @@ class MyMusicScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Моя музыка'),
+        title: const Text('Библиотека'),
         centerTitle: true,
       ),
       body: ListView(
@@ -31,7 +31,7 @@ class MyMusicScreen extends StatelessWidget {
         children: [
           // Заголовок с количеством треков
           _MusicCategoryHeader(
-            title: 'Моя музыка',
+            title: 'Библиотека',
             count: trackCount,
           ),
           const SizedBox(height: 14),

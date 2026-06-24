@@ -4,6 +4,7 @@ import '../models/mix.dart';
 import '../models/track.dart';
 import '../providers/music_provider.dart';
 import '../widgets/track_tile.dart';
+import 'mix_settings_screen.dart';
 
 class MixScreen extends StatelessWidget {
   final Mix mix;
@@ -22,6 +23,21 @@ class MixScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.tune, color: Colors.white70),
+                tooltip: 'Настройки микса',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => MixSettingsScreen(
+                        mixId: mix.id,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,

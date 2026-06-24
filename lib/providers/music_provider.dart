@@ -53,6 +53,7 @@ class MusicProvider extends ChangeNotifier {
   List<Track> get downloadedTracks => _downloadedTracks;
   bool get isLoadingDownloads => _isLoadingDownloads;
   DownloadManager get downloadService => _downloadService;
+  VkApiService get apiService => _apiService;
 
   // Auth
   bool get isAuthorized => _apiService.isAuthorized;
