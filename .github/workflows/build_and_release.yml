@@ -37,7 +37,7 @@ on:
     tags: [ "v*" ]
 
 env:
-  FLUTTER_VERSION: '3.24.0'
+  FLUTTER_VERSION: '3.44.3'
   APP_NAME: 'VK Z'
 
 jobs:
@@ -56,8 +56,10 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Configure Flutter
+        run: |
+          flutter config --no-analytics --no-cli-animations
+          flutter pub get
 
       - name: Run analyzer
         run: flutter analyze
@@ -87,8 +89,10 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Configure Flutter
+        run: |
+          flutter config --no-analytics --no-cli-animations
+          flutter pub get
 
       - name: Generate icons
         run: dart run flutter_launcher_icons || true
@@ -129,8 +133,10 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Configure Flutter
+        run: |
+          flutter config --no-analytics --no-cli-animations
+          flutter pub get
 
       - name: Generate icons
         run: dart run flutter_launcher_icons || true
