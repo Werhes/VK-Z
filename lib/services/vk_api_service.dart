@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/track.dart';
 import '../models/playlist.dart';
@@ -57,7 +58,7 @@ class VkApiService {
     return data;
   }
 
-  // Get user's audio catalog (playlists, albums, etc.)
+  // Get user's audio catalog - the main working endpoint
   Future<Map<String, dynamic>> getCatalog({
     String? userId,
   }) async {
@@ -70,44 +71,137 @@ class VkApiService {
     return data;
   }
 
-  // Get user's audio tracks
+  // Get user's audio tracks from catalog
   Future<List<Track>> getTracks({
     int? ownerId,
     int offset = 0,
     int count = 50,
   }) async {
-    final params = <String, String>{
-      'offset': offset.toString(),
-      'count': count.toString(),
-    };
-    if (ownerId != null) params['owner_id'] = ownerId.toString();
+    try {
+      // Try the direct method first (might work with some tokens)
+      final params = <String, String>{
+        'offset': offset.toString(),
+        'count': count.toString(),
+      };
+      if (ownerId != null) params['owner_id'] = ownerId.toString();
 
-    final data = await _call(method: 'audio.get', params: params);
-    final items = data['response']?['items'] as List? ?? [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Track.fromJson(e))
-        .toList();
+      final data = await _call(method: 'audio.get', params: params);
+      final items = data['response']?['items'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (_) {
+      // Fallback: extract tracks from catalog
+      return _getTracksFromCatalog();
+    }
   }
 
-  // Get playlists
+  /// Extract user's tracks from the catalog's "My Music" or similar sections
+  Future<List<Track>> _getTracksFromCatalog() async {
+    try {
+      final catalog = await getCatalog();
+      final sections = catalog['response']?['sections'] as List? ?? [];
+
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final sectionId = section['id'] as String? ?? '';
+
+        // Look for sections containing user's tracks
+        // Common section IDs: 'my_music', 'my_tracks', 'recent', 'favorite'
+        if (sectionId.contains('my') || 
+            sectionId.contains('recent') || 
+            sectionId.contains('favorite') ||
+            sectionId.contains('likes')) {
+          final tracks = section['tracks'] as List? ?? [];
+          if (tracks.isNotEmpty) {
+            return tracks
+                .whereType<Map<String, dynamic>>()
+                .map((e) => Track.fromJson(e))
+                .toList();
+          }
+        }
+      }
+
+      // Fallback: collect all unique tracks from all sections
+      final allTracks = <Track>[];
+      final seenIds = <String>{};
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final tracks = section['tracks'] as List? ?? [];
+        for (final trackData in tracks) {
+          if (trackData is! Map<String, dynamic>) continue;
+          final track = Track.fromJson(trackData);
+          final key = '${track.ownerId}_${track.id}';
+          if (seenIds.add(key)) {
+            allTracks.add(track);
+          }
+        }
+      }
+
+      return allTracks;
+    } catch (e) {
+      debugPrint('Failed to extract tracks from catalog: $e');
+      return [];
+    }
+  }
+
+  // Get playlists from catalog
   Future<List<Playlist>> getPlaylists({
     int? ownerId,
     int offset = 0,
     int count = 50,
   }) async {
-    final params = <String, String>{
-      'offset': offset.toString(),
-      'count': count.toString(),
-    };
-    if (ownerId != null) params['owner_id'] = ownerId.toString();
+    try {
+      // Try the direct method first
+      final params = <String, String>{
+        'offset': offset.toString(),
+        'count': count.toString(),
+      };
+      if (ownerId != null) params['owner_id'] = ownerId.toString();
 
-    final data = await _call(method: 'audio.getPlaylists', params: params);
-    final items = data['response']?['items'] as List? ?? [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Playlist.fromJson(e))
-        .toList();
+      final data = await _call(method: 'audio.getPlaylists', params: params);
+      final items = data['response']?['items'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Playlist.fromJson(e))
+          .toList();
+    } catch (_) {
+      // Fallback: extract playlists from catalog
+      return _getPlaylistsFromCatalog();
+    }
+  }
+
+  /// Extract playlists from catalog sections
+  Future<List<Playlist>> _getPlaylistsFromCatalog() async {
+    try {
+      final catalog = await getCatalog();
+      final sections = catalog['response']?['sections'] as List? ?? [];
+      final playlists = <Playlist>[];
+
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+
+        // Some sections have playlists directly
+        final sectionPlaylists = section['playlists'] as List? ?? [];
+        for (final plData in sectionPlaylists) {
+          if (plData is! Map<String, dynamic>) continue;
+          playlists.add(Playlist.fromJson(plData));
+        }
+
+        // Some sections have albums
+        final albums = section['albums'] as List? ?? [];
+        for (final albumData in albums) {
+          if (albumData is! Map<String, dynamic>) continue;
+          playlists.add(Playlist.fromJson(albumData));
+        }
+      }
+
+      return playlists;
+    } catch (e) {
+      debugPrint('Failed to extract playlists from catalog: $e');
+      return [];
+    }
   }
 
   // Get tracks from a specific playlist
@@ -138,38 +232,81 @@ class VkApiService {
     int offset = 0,
     int count = 50,
   }) async {
-    final params = <String, String>{
-      'q': query,
-      'offset': offset.toString(),
-      'count': count.toString(),
-      'autocomplete': '1',
-      'sort': '2', // 2 = by duration, 0 = by date, 1 = by popularity
-    };
+    try {
+      final params = <String, String>{
+        'q': query,
+        'offset': offset.toString(),
+        'count': count.toString(),
+        'autocomplete': '1',
+        'sort': '2',
+      };
 
-    final data = await _call(method: 'audio.search', params: params);
-    final items = data['response']?['items'] as List? ?? [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Track.fromJson(e))
-        .toList();
+      final data = await _call(method: 'audio.search', params: params);
+      final items = data['response']?['items'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (e) {
+      debugPrint('Search failed: $e');
+      return [];
+    }
   }
 
-  // Get recommended tracks
+  // Get recommended tracks from catalog
   Future<List<Track>> getRecommendations({
     int offset = 0,
     int count = 50,
   }) async {
-    final params = <String, String>{
-      'offset': offset.toString(),
-      'count': count.toString(),
-    };
+    try {
+      // Try direct method
+      final params = <String, String>{
+        'offset': offset.toString(),
+        'count': count.toString(),
+      };
 
-    final data = await _call(method: 'audio.getRecommendations', params: params);
-    final items = data['response']?['items'] as List? ?? [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Track.fromJson(e))
-        .toList();
+      final data = await _call(method: 'audio.getRecommendations', params: params);
+      final items = data['response']?['items'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (_) {
+      // Fallback: extract recommendations from catalog
+      return _getRecommendationsFromCatalog();
+    }
+  }
+
+  /// Extract recommendations from catalog
+  Future<List<Track>> _getRecommendationsFromCatalog() async {
+    try {
+      final catalog = await getCatalog();
+      final sections = catalog['response']?['sections'] as List? ?? [];
+
+      for (final section in sections) {
+        if (section is! Map<String, dynamic>) continue;
+        final sectionId = section['id'] as String? ?? '';
+
+        // Look for recommendation sections
+        if (sectionId.contains('recommend') || 
+            sectionId.contains('discover') || 
+            sectionId.contains('popular') ||
+            sectionId.contains('new')) {
+          final tracks = section['tracks'] as List? ?? [];
+          if (tracks.isNotEmpty) {
+            return tracks
+                .whereType<Map<String, dynamic>>()
+                .map((e) => Track.fromJson(e))
+                .toList();
+          }
+        }
+      }
+
+      return [];
+    } catch (e) {
+      debugPrint('Failed to extract recommendations from catalog: $e');
+      return [];
+    }
   }
 
   // Get popular tracks
@@ -177,17 +314,22 @@ class VkApiService {
     int offset = 0,
     int count = 50,
   }) async {
-    final params = <String, String>{
-      'offset': offset.toString(),
-      'count': count.toString(),
-    };
+    try {
+      final params = <String, String>{
+        'offset': offset.toString(),
+        'count': count.toString(),
+      };
 
-    final data = await _call(method: 'audio.getPopular', params: params);
-    final items = data['response'] as List? ?? [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Track.fromJson(e))
-        .toList();
+      final data = await _call(method: 'audio.getPopular', params: params);
+      final items = data['response'] as List? ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Track.fromJson(e))
+          .toList();
+    } catch (e) {
+      debugPrint('getPopular failed: $e');
+      return [];
+    }
   }
 
   // Get audio by ID (for getting direct audio URLs)
@@ -237,21 +379,21 @@ class VkApiService {
         }
       }
       
-      // Fallback: create mix from recommendations
-      final recs = await getRecommendations(count: 30);
-      if (recs.isNotEmpty) {
-        return Mix.fromRecommendations(recs);
+      // Fallback: create mix from catalog tracks
+      final allTracks = await _getTracksFromCatalog();
+      if (allTracks.length >= 5) {
+        allTracks.shuffle();
+        return Mix(
+          id: 'my_music_mix',
+          title: 'Мой Микс',
+          description: 'Ваши треки в случайном порядке',
+          tracks: allTracks.take(30).toList(),
+        );
       }
       
       return null;
     } catch (e) {
-      // Fallback to recommendations-based mix
-      try {
-        final recs = await getRecommendations(count: 30);
-        if (recs.isNotEmpty) {
-          return Mix.fromRecommendations(recs);
-        }
-      } catch (_) {}
+      debugPrint('getMix failed: $e');
       return null;
     }
   }
@@ -262,6 +404,7 @@ class VkApiService {
       if (photo['photo_600'] != null) return photo['photo_600'] as String;
       if (photo['photo_300'] != null) return photo['photo_300'] as String;
       if (photo['photo_120'] != null) return photo['photo_120'] as String;
+      if (photo['photo_68'] != null) return photo['photo_68'] as String;
     }
     if (section['cover'] != null) {
       final cover = section['cover'] as Map<String, dynamic>;

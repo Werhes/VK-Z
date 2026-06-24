@@ -1,9 +1,90 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_provider.dart';
+import '../services/download_service.dart';
 
-class PlayerScreen extends StatelessWidget {
+class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
+
+  @override
+  State<PlayerScreen> createState() => _PlayerScreenState();
+}
+
+class _PlayerScreenState extends State<PlayerScreen> {
+  bool _isDownloaded = false;
+  DownloadProgress? _downloadProgress;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDownloadStatus();
+    });
+  }
+
+  void _checkDownloadStatus() async {
+    final provider = context.read<MusicProvider>();
+    final track = provider.currentTrack;
+    if (track == null) return;
+
+    final downloaded = await provider.isTrackDownloaded(track);
+    final trackKey = '${track.ownerId}_${track.id}';
+    final progress = provider.downloadService.getCurrentProgress(trackKey);
+
+    if (mounted) {
+      setState(() {
+        _isDownloaded = downloaded;
+        _downloadProgress = progress;
+      });
+    }
+
+    provider.downloadService.getDownloadProgress(trackKey).listen((progress) {
+      if (mounted) {
+        setState(() {
+          _downloadProgress = progress;
+          _isDownloaded = progress.status == DownloadStatus.completed;
+        });
+      }
+    });
+  }
+
+  void _handleDownload() async {
+    final provider = context.read<MusicProvider>();
+    final track = provider.currentTrack;
+    if (track == null) return;
+
+    if (_isDownloaded) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Удалить трек'),
+          content: Text('Удалить "${track.title}" из загрузок?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await provider.deleteDownloadedTrack(track);
+        if (mounted) {
+          setState(() {
+            _isDownloaded = false;
+            _downloadProgress = null;
+          });
+        }
+      }
+    } else {
+      await provider.downloadTrack(track);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +110,10 @@ class PlayerScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16),
             ),
             centerTitle: true,
+            actions: [
+              // Download button in app bar
+              _buildAppBarDownloadButton(),
+            ],
           ),
           extendBodyBehindAppBar: true,
           body: Container(
@@ -78,14 +163,30 @@ class PlayerScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          track.title,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                track.title,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            // Offline indicator
+                            if (_isDownloaded)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8),
+                                child: Icon(
+                                  Icons.offline_pin,
+                                  color: Colors.green,
+                                  size: 20,
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -213,6 +314,33 @@ class PlayerScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildAppBarDownloadButton() {
+    if (_downloadProgress != null &&
+        _downloadProgress!.status == DownloadStatus.downloading) {
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            value: _downloadProgress!.progress,
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    return IconButton(
+      icon: Icon(
+        _isDownloaded ? Icons.cloud_done : Icons.cloud_download_outlined,
+        color: _isDownloaded ? Colors.green : Colors.white70,
+      ),
+      onPressed: _handleDownload,
+      tooltip: _isDownloaded ? 'Удалить из загрузок' : 'Скачать',
     );
   }
 

@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v3
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v3
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
@@ -112,6 +112,7 @@ jobs:
           name: android-apks
           path: build/app/outputs/flutter-apk/*.apk
           compression-level: 0
+          if-no-files-found: warn
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
@@ -119,6 +120,7 @@ jobs:
           name: android-aab
           path: build/app/outputs/bundle/release/*.aab
           compression-level: 0
+          if-no-files-found: warn
 
   # ============================================
   # 3. СБОРКА WINDOWS (опционально)
@@ -132,7 +134,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v3
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
@@ -200,6 +202,7 @@ jobs:
           name: windows-build
           path: vk_z_windows_*.zip
           compression-level: 0
+          if-no-files-found: warn
 
   # ============================================
   # 4. СОЗДАНИЕ РЕЛИЗА
@@ -207,7 +210,8 @@ jobs:
   release:
     name: 📦 Создание релиза
     needs: [build-android, build-windows]
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
+    # Запускается только при workflow_dispatch или при пуше тега v*
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -217,15 +221,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
 
       - name: Prepare release files
         run: |
           mkdir -p release_files
           if [ -d "artifacts" ]; then
-            find artifacts -name "*.apk" -exec cp {} release_files/ \; 2>/dev/null || true
-            find artifacts -name "*.aab" -exec cp {} release_files/ \; 2>/dev/null || true
-            find artifacts -name "*.zip" -exec cp {} release_files/ \; 2>/dev/null || true
+            # v4 download-artifact creates subdirectories per artifact name
+            find artifacts -type f \( -name "*.apk" -o -name "*.aab" -o -name "*.zip" \) -exec cp {} release_files/ \; 2>/dev/null || true
           fi
           echo "=== Release files ==="
           ls -la release_files/ || echo "No release files found"
@@ -235,7 +237,7 @@ jobs:
           VERSION="${{ github.event.inputs.version_name }}"
           TITLE="${{ github.event.inputs.release_title }}"
           NOTES="${{ github.event.inputs.release_notes }}"
-          # On push events, use git tag info
+          # On push events (tag), use git tag info
           if [ -z "$VERSION" ]; then
             VERSION="${GITHUB_REF_NAME}"
             TITLE="VK Z ${VERSION}"
@@ -266,7 +268,7 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version_name || github.ref_name }}
           name: ${{ github.event.inputs.release_title || format('VK Z {0}', github.ref_name) }}
@@ -282,8 +284,8 @@ jobs:
   # ============================================
   notify-telegram:
     name: 📱 Уведомление в Telegram
-    needs: [build-android, build-windows]
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
+    needs: [release]
+    if: ${{ always() && needs.release.result == 'success' && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -302,7 +304,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
 
       - name: Debug artifacts
         if: steps.check_secrets.outputs.telegram_configured == 'true'

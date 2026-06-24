@@ -3,11 +3,13 @@ import '../models/track.dart';
 import '../models/playlist.dart';
 import '../models/mix.dart';
 import '../services/vk_api_service.dart';
+import '../services/download_service.dart';
 
 class MusicProvider extends ChangeNotifier {
   final VkApiService _apiService;
+  final DownloadService _downloadService;
 
-  MusicProvider(this._apiService);
+  MusicProvider(this._apiService) : _downloadService = DownloadService();
 
   // Auth state
   bool _isLoading = false;
@@ -28,6 +30,10 @@ class MusicProvider extends ChangeNotifier {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
+  // Downloaded tracks
+  List<Track> _downloadedTracks = [];
+  bool _isLoadingDownloads = false;
+
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -44,6 +50,9 @@ class MusicProvider extends ChangeNotifier {
   Duration get duration => _duration;
   bool get hasNext => _currentIndex < _queue.length - 1;
   bool get hasPrevious => _currentIndex > 0;
+  List<Track> get downloadedTracks => _downloadedTracks;
+  bool get isLoadingDownloads => _isLoadingDownloads;
+  DownloadService get downloadService => _downloadService;
 
   // Auth
   bool get isAuthorized => _apiService.isAuthorized;
@@ -64,6 +73,7 @@ class MusicProvider extends ChangeNotifier {
     _queue = [];
     _currentIndex = -1;
     _isPlaying = false;
+    _downloadedTracks = [];
     notifyListeners();
   }
 
@@ -85,6 +95,9 @@ class MusicProvider extends ChangeNotifier {
       _playlists = results[1] as List<Playlist>;
       _recommendations = results[2] as List<Track>;
       _mix = results[3] as Mix?;
+
+      // Also load downloaded tracks
+      await loadDownloadedTracks();
     } catch (e) {
       _error = e.toString();
     }
@@ -215,5 +228,72 @@ class MusicProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Download management
+
+  /// Load list of downloaded tracks
+  Future<void> loadDownloadedTracks() async {
+    _isLoadingDownloads = true;
+    notifyListeners();
+
+    try {
+      final downloadedInfos = await _downloadService.getDownloadedTracks();
+      _downloadedTracks = downloadedInfos.map((info) {
+        final track = info.toTrack();
+        return track.copyWith(isDownloaded: true, localPath: info.localPath);
+      }).toList();
+    } catch (e) {
+      debugPrint('Failed to load downloaded tracks: $e');
+    }
+
+    _isLoadingDownloads = false;
+    notifyListeners();
+  }
+
+  /// Download a track
+  Future<void> downloadTrack(Track track) async {
+    try {
+      await _downloadService.downloadTrack(track);
+      await loadDownloadedTracks();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to download track: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Delete a downloaded track
+  Future<void> deleteDownloadedTrack(Track track) async {
+    try {
+      await _downloadService.deleteTrack(track);
+      _downloadedTracks.removeWhere((t) =>
+          t.id == track.id && t.ownerId == track.ownerId);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to delete track: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Check if a track is downloaded
+  Future<bool> isTrackDownloaded(Track track) async {
+    return _downloadedTracks.any((t) =>
+        t.id == track.id && t.ownerId == track.ownerId);
+  }
+
+  /// Get local path for a downloaded track
+  String? getLocalPath(Track track) {
+    final found = _downloadedTracks.cast<Track?>().firstWhere(
+      (t) => t!.id == track.id && t.ownerId == track.ownerId,
+      orElse: () => null,
+    );
+    return found?.localPath;
+  }
+
+  @override
+  void dispose() {
+    _downloadService.dispose();
+    super.dispose();
   }
 }

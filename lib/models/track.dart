@@ -7,6 +7,8 @@ class Track {
   final String? albumArtUrl;
   final String? trackUrl;
   final bool isAvailable;
+  final bool isDownloaded;
+  final String? localPath;
 
   Track({
     required this.id,
@@ -17,6 +19,8 @@ class Track {
     this.albumArtUrl,
     this.trackUrl,
     this.isAvailable = true,
+    this.isDownloaded = false,
+    this.localPath,
   });
 
   factory Track.fromJson(Map<String, dynamic> json) {
@@ -58,6 +62,32 @@ class Track {
       'duration': duration,
       'url': trackUrl,
     };
+  }
+
+  Track copyWith({
+    int? id,
+    int? ownerId,
+    String? title,
+    String? artist,
+    int? duration,
+    String? albumArtUrl,
+    String? trackUrl,
+    bool? isAvailable,
+    bool? isDownloaded,
+    String? localPath,
+  }) {
+    return Track(
+      id: id ?? this.id,
+      ownerId: ownerId ?? this.ownerId,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      duration: duration ?? this.duration,
+      albumArtUrl: albumArtUrl ?? this.albumArtUrl,
+      trackUrl: trackUrl ?? this.trackUrl,
+      isAvailable: isAvailable ?? this.isAvailable,
+      isDownloaded: isDownloaded ?? this.isDownloaded,
+      localPath: localPath ?? this.localPath,
+    );
   }
 
   String get formattedDuration {

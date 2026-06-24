@@ -125,6 +125,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
                 ],
 
+                // Downloaded tracks section
+                if (provider.downloadedTracks.isNotEmpty) ...[
+                  _buildSectionHeader('Скачано'),
+                  _buildDownloadedTracksSummary(provider),
+                  const SizedBox(height: 8),
+                ],
+
                 // Recommendations section
                 if (provider.recommendations.isNotEmpty) ...[
                   _buildSectionHeader('Рекомендации'),
@@ -184,6 +191,71 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       bottomSheet: const MiniPlayer(),
+    );
+  }
+
+  Widget _buildDownloadedTracksSummary(MusicProvider provider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () => _showDownloadedTracks(provider),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.download_done,
+                  color: Colors.green,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Скачанные треки',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${provider.downloadedTracks.length} треков',
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDownloadedTracks(MusicProvider provider) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _DownloadedTracksScreen(provider: provider),
+      ),
     );
   }
 
@@ -378,6 +450,80 @@ class _HomeScreenState extends State<HomeScreen> {
           onPlay: () => _playTrack(track, provider.searchResults),
         );
       },
+    );
+  }
+}
+
+/// Full screen showing all downloaded tracks
+class _DownloadedTracksScreen extends StatelessWidget {
+  final MusicProvider provider;
+
+  const _DownloadedTracksScreen({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Скачанные треки'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => provider.loadDownloadedTracks(),
+          ),
+        ],
+      ),
+      body: Consumer<MusicProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoadingDownloads) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (provider.downloadedTracks.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.download_outlined,
+                    size: 64,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Нет скачанных треков',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Скачайте треки, чтобы слушать офлайн',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.only(bottom: 80),
+            itemCount: provider.downloadedTracks.length,
+            itemBuilder: (context, index) {
+              final track = provider.downloadedTracks[index];
+              return TrackTile(
+                track: track,
+                showDownloadButton: true,
+                onTap: () => provider.playTrack(track, queue: provider.downloadedTracks),
+                onPlay: () => provider.playTrack(track, queue: provider.downloadedTracks),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
