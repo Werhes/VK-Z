@@ -118,7 +118,8 @@ class VkApiService {
   Future<dynamic> _call(String method,
       {Map<String, String>? params,
       bool skipAuthorization = false,
-      String? anonymousToken}) async {
+      String? anonymousToken,
+      String? baseUrl}) async {
     // Генерируем device_id если ещё нет
     _deviceId ??= VkConfig.generateDeviceId();
 
@@ -133,10 +134,11 @@ class VkApiService {
       if (params != null) ...params,
     };
 
-    final url = '${VkConfig.apiBaseUrl}/$method';
+    final apiUrl = baseUrl ?? VkConfig.apiBaseUrl;
+    final url = '$apiUrl/$method';
     final body = Uri(queryParameters: bodyParams).query;
 
-    LogService.d('VK API POST: $method (${bodyParams.length} params)', tag: 'API');
+    LogService.d('VK API POST: $method (${bodyParams.length} params) -> $apiUrl', tag: 'API');
 
     try {
       final request = await _httpClient!.postUrl(Uri.parse(url));
@@ -190,6 +192,19 @@ class VkApiService {
 
       return responseData;
     } catch (e) {
+      if (baseUrl == null &&
+          e is Exception &&
+          e.toString().contains('VK API Error [3]: Unknown method passed') &&
+          VkConfig.apiFallbackBaseUrl != VkConfig.apiBaseUrl) {
+        LogService.w('VK API fallback: $method not found on ${VkConfig.apiBaseUrl}, retrying with ${VkConfig.apiFallbackBaseUrl}', tag: 'API');
+        return await _call(
+          method,
+          params: params,
+          skipAuthorization: skipAuthorization,
+          anonymousToken: anonymousToken,
+          baseUrl: VkConfig.apiFallbackBaseUrl,
+        );
+      }
       if (e is Exception) rethrow;
       throw Exception('Network error: $e');
     }

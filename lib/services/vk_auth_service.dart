@@ -98,26 +98,24 @@ class VkAuthService {
       'v': VkConfig.apiVersion,
     };
 
-    const url = 'https://api.vk.ru/oauth/get_anonym_token';
     final body = Uri(queryParameters: params).query;
+    final primaryUrl = '${VkConfig.oauthBaseUrl}/get_anonym_token';
+    final fallbackUrl = '${VkConfig.oauthFallbackBaseUrl}/get_anonym_token';
 
-    LogService.d('Getting anonymous token from $url', tag: 'AUTH');
+    LogService.d('Getting anonymous token from $primaryUrl', tag: 'AUTH');
 
-    final request = await _httpClient!.postUrl(Uri.parse(url));
-    for (final entry in VkConfig.headers.entries) {
-      request.headers.set(entry.key, entry.value);
+    Map<String, dynamic> data;
+    try {
+      data = await _postFormUrl(primaryUrl, body);
+    } catch (e) {
+      LogService.w('Anonymous token request failed on $primaryUrl: $e', tag: 'AUTH');
+      if (fallbackUrl != primaryUrl) {
+        LogService.d('Retrying anonymous token request on $fallbackUrl', tag: 'AUTH');
+        data = await _postFormUrl(fallbackUrl, body);
+      } else {
+        rethrow;
+      }
     }
-    request.headers.set('Content-Length', body.length.toString());
-    request.write(body);
-
-    final response = await request.close();
-    final responseBody = await response.transform(utf8.decoder).join();
-
-    if (response.statusCode != 200) {
-      throw Exception('HTTP ${response.statusCode}: $responseBody');
-    }
-
-    final data = jsonDecode(responseBody) as Map<String, dynamic>;
 
     if (data.containsKey('error')) {
       final error = data['error'] as Map<String, dynamic>;
@@ -128,7 +126,7 @@ class VkAuthService {
 
     final anonToken = data['access_token'] as String?;
     if (anonToken == null || anonToken.isEmpty) {
-      throw Exception('No anonymous token in response: $responseBody');
+      throw Exception('No anonymous token in response: ${jsonEncode(data)}');
     }
 
     _anonymousToken = anonToken;
@@ -351,8 +349,10 @@ class VkAuthService {
 
   /// POST на VK API метод (auth.*) через api.vk.ru/method/
   Future<Map<String, dynamic>> _oauthPost(
-      String method, Map<String, String> params) async {
-    final url = '${VkConfig.apiBaseUrl}/$method';
+      String method, Map<String, String> params,
+      {String? baseUrl}) async {
+    final apiUrl = baseUrl ?? VkConfig.apiBaseUrl;
+    final url = '$apiUrl/$method';
     final body = Uri(queryParameters: params).query;
 
     final request = await _httpClient!.postUrl(Uri.parse(url));
@@ -362,6 +362,62 @@ class VkAuthService {
     request.headers.set('Content-Length', body.length.toString());
     request.write(body);
 
+    try {
+      final data = await _processResponse(request);
+      return data;
+    } catch (e) {
+      if (baseUrl == null &&
+          e is Exception &&
+          e.toString().contains('Unknown method passed')) {
+        final fallbackBaseUrl = VkConfig.apiFallbackBaseUrl;
+        if (fallbackBaseUrl != apiUrl) {
+          return await _oauthPost(method, params, baseUrl: fallbackBaseUrl);
+        }
+      }
+      rethrow;
+    }
+  }
+
+  /// POST на OAuth token endpoint (https://api.vk.ru/oauth/token)
+  Future<Map<String, dynamic>> _oauthPostToken(
+      Map<String, String> params,
+      {String? baseUrl}) async {
+    final apiUrl = baseUrl ?? VkConfig.oauthBaseUrl;
+    final url = '$apiUrl/token';
+    final body = Uri(queryParameters: params).query;
+
+    final request = await _httpClient!.postUrl(Uri.parse(url));
+    for (final entry in VkConfig.headers.entries) {
+      request.headers.set(entry.key, entry.value);
+    }
+    request.headers.set('Content-Length', body.length.toString());
+    request.write(body);
+
+    try {
+      final data = await _processResponse(request);
+      return data;
+    } catch (e) {
+      if (baseUrl == null && e is Exception) {
+        final fallbackBaseUrl = VkConfig.oauthFallbackBaseUrl;
+        if (fallbackBaseUrl != apiUrl) {
+          return await _oauthPostToken(params, baseUrl: fallbackBaseUrl);
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> _postFormUrl(String url, String body) async {
+    final request = await _httpClient!.postUrl(Uri.parse(url));
+    for (final entry in VkConfig.headers.entries) {
+      request.headers.set(entry.key, entry.value);
+    }
+    request.headers.set('Content-Length', body.length.toString());
+    request.write(body);
+    return await _processResponse(request);
+  }
+
+  Future<Map<String, dynamic>> _processResponse(HttpClientRequest request) async {
     final response = await request.close();
     final responseBody = await response.transform(utf8.decoder).join();
 
@@ -370,38 +426,7 @@ class VkAuthService {
     }
 
     final data = jsonDecode(responseBody) as Map<String, dynamic>;
-
-    if (data.containsKey('error')) {
-      final error = data['error'] as Map<String, dynamic>;
-      final errorCode = error['error_code'];
-      final errorMsg = error['error_msg'] ?? 'Unknown';
-      throw Exception('VK API Error [$errorCode]: $errorMsg');
-    }
-
     return data;
-  }
-
-  /// POST на OAuth token endpoint (https://api.vk.ru/oauth/token)
-  Future<Map<String, dynamic>> _oauthPostToken(
-      Map<String, String> params) async {
-    const url = 'https://api.vk.ru/oauth/token';
-    final body = Uri(queryParameters: params).query;
-
-    final request = await _httpClient!.postUrl(Uri.parse(url));
-    for (final entry in VkConfig.headers.entries) {
-      request.headers.set(entry.key, entry.value);
-    }
-    request.headers.set('Content-Length', body.length.toString());
-    request.write(body);
-
-    final response = await request.close();
-    final responseBody = await response.transform(utf8.decoder).join();
-
-    if (response.statusCode != 200) {
-      throw Exception('HTTP ${response.statusCode}: $responseBody');
-    }
-
-    return jsonDecode(responseBody) as Map<String, dynamic>;
   }
 }
 

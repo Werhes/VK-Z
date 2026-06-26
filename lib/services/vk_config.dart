@@ -15,6 +15,11 @@ class VkConfig {
 
   // VK API base URL
   static const String apiBaseUrl = 'https://api.vk.ru/method';
+  static const String apiFallbackBaseUrl = 'https://api.vk.com/method';
+
+  // OAuth API base URL
+  static const String oauthBaseUrl = 'https://api.vk.ru/oauth';
+  static const String oauthFallbackBaseUrl = 'https://api.vk.com/oauth';
 
   // OAuth redirect URL
   static const String redirectUri = 'https://oauth.vk.ru/blank.html';

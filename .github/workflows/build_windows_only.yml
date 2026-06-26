@@ -1,4 +1,4 @@
-name: Build Windows Only
+name: Бета-сборка
 
 on:
   workflow_dispatch:
