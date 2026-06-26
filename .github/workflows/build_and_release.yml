@@ -32,10 +32,7 @@ on:
         default: false
         type: boolean
 
-  push:
-    branches: [ "main", "release/**" ]
-    tags: [ "v*" ]
-
+  # Автосборка отключена — только ручной запуск через workflow_dispatch
 permissions:
   contents: write
 
@@ -317,38 +314,40 @@ jobs:
           
           # Strategy 1: Standard DerivedData path (build/macos/Build/Products/Release)
           APP_DIR="build/macos/Build/Products/Release"
-          if [ -d "$APP_DIR" ] && [ -d "$APP_DIR/Runner.app" ]; then
-            echo "✅ Strategy 1: Found Runner.app at $APP_DIR/Runner.app"
-            cd "$APP_DIR"
-            zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" Runner.app
-            echo "✅ ZIP created successfully"
-            exit 0
-          fi
+          for app_name in "vk_z.app" "Runner.app"; do
+            if [ -d "$APP_DIR" ] && [ -d "$APP_DIR/$app_name" ]; then
+              echo "✅ Strategy 1: Found $app_name at $APP_DIR/$app_name"
+              cd "$APP_DIR"
+              zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" "$app_name"
+              echo "✅ ZIP created successfully"
+              exit 0
+            fi
+          done
           
-          # Strategy 2: Search for Runner.app in build/macos recursively
+          # Strategy 2: Search for any .app in build/macos recursively
           echo "Strategy 1 failed. Trying Strategy 2: searching build/macos recursively..."
-          RUNNER_APP=$(find build/macos -name "Runner.app" -type d -maxdepth 6 2>/dev/null | head -1)
-          if [ -n "$RUNNER_APP" ]; then
-            echo "✅ Strategy 2: Found Runner.app at: $RUNNER_APP"
-            cd "$(dirname "$RUNNER_APP")"
-            zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" Runner.app
+          APP_BUNDLE=$(find build/macos -name "*.app" -type d -maxdepth 6 2>/dev/null | head -1)
+          if [ -n "$APP_BUNDLE" ]; then
+            echo "✅ Strategy 2: Found app bundle at: $APP_BUNDLE"
+            cd "$(dirname "$APP_BUNDLE")"
+            zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" "$(basename "$APP_BUNDLE")"
             echo "✅ ZIP created successfully"
             exit 0
           fi
           
-          # Strategy 3: Search entire filesystem for Runner.app
+          # Strategy 3: Search entire filesystem for any .app
           echo "Strategy 2 failed. Trying Strategy 3: searching entire filesystem..."
-          RUNNER_APP=$(find / -name "Runner.app" -type d -maxdepth 8 2>/dev/null | head -1)
-          if [ -n "$RUNNER_APP" ]; then
-            echo "✅ Strategy 3: Found Runner.app at: $RUNNER_APP"
-            cd "$(dirname "$RUNNER_APP")"
-            zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" Runner.app
+          APP_BUNDLE=$(find / -name "*.app" -type d -maxdepth 8 -not -path "*/Xcode*" -not -path "*/Simulator*" -not -path "*/Applications/*" 2>/dev/null | head -1)
+          if [ -n "$APP_BUNDLE" ]; then
+            echo "✅ Strategy 3: Found app bundle at: $APP_BUNDLE"
+            cd "$(dirname "$APP_BUNDLE")"
+            zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" "$(basename "$APP_BUNDLE")"
             echo "✅ ZIP created successfully"
             exit 0
           fi
           
           # All strategies failed
-          echo "❌ Runner.app not found anywhere!"
+          echo "❌ No .app bundle found anywhere!"
           echo "=== Full build/macos directory tree ==="
           if [ -d "build/macos" ]; then
             find build/macos -maxdepth 6 -type d 2>/dev/null

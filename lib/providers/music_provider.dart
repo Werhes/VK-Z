@@ -83,22 +83,19 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Load user's music - fetch catalog once and parse all data from it
+  // Load user's music - fetch all data in parallel using direct API methods
   Future<void> loadUserMusic() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      // Fetch catalog once and share the result
-      final catalog = await _apiService.getCatalog();
-
-      // Parse all data from the single catalog response
+      // Fetch all data in parallel using direct API methods
       final results = await Future.wait([
-        _apiService.getTracksFromCatalogData(catalog),
-        _apiService.getPlaylistsFromCatalogData(catalog),
-        _apiService.getRecommendationsFromCatalogData(catalog),
-        _apiService.getMixFromCatalogData(catalog),
+        _apiService.getTracks(),
+        _apiService.getPlaylists(),
+        _apiService.getRecommendations(),
+        _apiService.getMix(),
       ]);
 
       _tracks = results[0] as List<Track>;
