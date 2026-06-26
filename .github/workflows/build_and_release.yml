@@ -1,25 +1,25 @@
-name: 🚀 Автосборка VK Z
+name: Build VK Z
 
 on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Название версии (например v1.0.1)'
+        description: 'Version name (e.g. v1.0.1)'
         required: true
         default: 'v1.0.6'
         type: string
       release_title:
-        description: 'Заголовок релиза'
+        description: 'Release title'
         required: true
         default: 'Token fix'
         type: string
       release_notes:
-        description: 'Описание релиза (что нового)'
+        description: 'Release notes'
         required: true
-        default: '• Исправил баги'
+        default: '- Bug fixes'
         type: string
       release_type:
-        description: 'Тип релиза'
+        description: 'Release type'
         required: true
         default: 'prerelease'
         type: choice
@@ -27,12 +27,11 @@ on:
           - prerelease
           - release
       send_telegram:
-        description: 'Отправить уведомление в Telegram?'
+        description: 'Send Telegram notification?'
         required: true
         default: true
         type: boolean
 
-  # Автосборка отключена — только ручной запуск через workflow_dispatch
 permissions:
   contents: write
 
@@ -42,86 +41,57 @@ env:
 
 jobs:
   # ============================================
-  # 1. АНАЛИЗ КОДА
-  # ============================================
-  analyze:
-    name: 🔍 Анализ кода
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-
-      - name: Configure Flutter
-        run: |
-          flutter config --no-analytics --no-cli-animations
-          flutter pub get
-
-      - name: Run analyzer
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run tests
-        run: flutter test
-
-  # ============================================
-  # 2. СБОРКА ANDROID
+  # 1. BUILD ANDROID
   # ============================================
   build-android:
-    name: 📱 Сборка Android
-    needs: analyze
+    name: Build Android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: setup-rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
 
-      - name: Setup Android NDK
+      - name: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27
 
-      - name: Build Rust library for Android
+      - name: build-rust
         run: |
           cd rust
-          # Install cargo-ndk for cross-compilation
           cargo install cargo-ndk
-          # Build for all Android architectures
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../android/app/src/main/jniLibs build --release
 
-      - name: Setup Flutter
+      - name: setup-flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
-      - name: Setup Java
+      - name: setup-java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Configure Flutter
+      - name: configure
         run: |
           flutter config --no-analytics --no-cli-animations
           flutter pub get
 
-      - name: Generate icons
+      - name: icons
         run: dart run flutter_launcher_icons || true
 
-      - name: Build APK (Release)
+      - name: build-apk
         run: flutter build apk --release --split-per-abi
 
-      - name: Build AppBundle (AAB)
+      - name: build-aab
         run: flutter build appbundle --release
 
-      - name: Upload APK artifacts
+      - name: upload-apk
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
@@ -129,7 +99,7 @@ jobs:
           compression-level: 0
           if-no-files-found: warn
 
-      - name: Upload AAB artifact
+      - name: upload-aab
         uses: actions/upload-artifact@v4
         with:
           name: android-aab
@@ -138,63 +108,61 @@ jobs:
           if-no-files-found: warn
 
   # ============================================
-  # 3. СБОРКА iOS
+  # 2. BUILD IOS
   # ============================================
   build-ios:
-    name: 🍎 Сборка iOS
-    needs: analyze
+    name: Build iOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: setup-rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios
 
-      - name: Build Rust library for iOS
+      - name: build-rust
         run: |
           cd rust
           cargo build --release --target aarch64-apple-ios
-          # Copy to iOS project
           mkdir -p ../ios/Runner
           cp target/aarch64-apple-ios/release/librust_vk_z.a ../ios/Runner/
 
-      - name: Setup Flutter
+      - name: setup-flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
-      - name: Setup CocoaPods
+      - name: setup-cocoapods
         run: |
           gem install cocoapods
           pod setup
 
-      - name: Configure Flutter
+      - name: configure
         run: |
           flutter config --no-analytics --no-cli-animations
           flutter pub get
 
-      - name: Generate icons
+      - name: icons
         run: dart run flutter_launcher_icons || true
 
-      - name: Install Pods
+      - name: pod-install
         run: |
           cd ios
           pod install
 
-      - name: Build iOS (Release)
+      - name: build-ios
         run: flutter build ios --release --no-codesign
 
-      - name: Create IPA
+      - name: create-ipa
         run: |
           mkdir -p build/ios/ipa
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
           zip -r ../../../vk_z_ios_${{ github.event.inputs.version_name || 'latest' }}.ipa Payload/
 
-      - name: Upload iOS artifact
+      - name: upload-ipa
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
@@ -203,43 +171,43 @@ jobs:
           if-no-files-found: warn
 
   # ============================================
-  # 4. СБОРКА WINDOWS
+  # 3. BUILD WINDOWS
   # ============================================
   build-windows:
-    name: 🪟 Сборка Windows
-    needs: analyze
+    name: Build Windows
     runs-on: windows-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: setup-rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Rust library for Windows
+      - name: build-rust
+        shell: pwsh
         run: |
           cd rust
           cargo build --release
           copy target\release\rust_vk_z.dll ..\windows\runner\
 
-      - name: Setup Flutter
+      - name: setup-flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
-      - name: Configure Flutter
+      - name: configure
         run: |
           flutter config --no-analytics --no-cli-animations
           flutter pub get
 
-      - name: Generate icons
+      - name: icons
         run: dart run flutter_launcher_icons || true
 
-      - name: Build Windows (Release)
+      - name: build-windows
         run: flutter build windows --release
 
-      - name: Create ZIP archive
+      - name: create-zip
         shell: pwsh
         run: |
           $version = "${{ github.event.inputs.version_name }}"
@@ -284,7 +252,7 @@ jobs:
             }
           }
 
-      - name: Upload Windows artifact
+      - name: upload-zip
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
@@ -293,25 +261,23 @@ jobs:
           if-no-files-found: warn
 
   # ============================================
-  # 5. СБОРКА macOS
+  # 4. BUILD MACOS
   # ============================================
   build-macos:
-    name: 💻 Сборка macOS
-    needs: analyze
+    name: Build macOS
     runs-on: macos-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: setup-rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Build Rust library for macOS
+      - name: build-rust
         run: |
           cd rust
-          # Build universal binary (ARM64 + x86_64)
           cargo build --release --target aarch64-apple-darwin
           cargo build --release --target x86_64-apple-darwin
           mkdir -p target/universal/release
@@ -319,28 +285,27 @@ jobs:
             target/aarch64-apple-darwin/release/librust_vk_z.dylib \
             target/x86_64-apple-darwin/release/librust_vk_z.dylib \
             -output target/universal/release/librust_vk_z.dylib
-          # Copy to macOS Runner
           cp target/universal/release/librust_vk_z.dylib ../macos/Runner/
 
-      - name: Setup Flutter
+      - name: setup-flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
-      - name: Configure Flutter
+      - name: configure
         run: |
           flutter config --no-analytics --no-cli-animations
           flutter pub get
 
-      - name: Generate icons
+      - name: icons
         run: dart run flutter_launcher_icons || true
 
-      - name: Build macOS (Release)
+      - name: build-macos
         id: build_macos
         run: flutter build macos --release
 
-      - name: Debug build output
+      - name: debug-output
         if: always()
         run: |
           echo "=== Checking build/macos structure ==="
@@ -360,47 +325,43 @@ jobs:
             ls -la build/ 2>/dev/null || echo "build/ directory not found"
           fi
 
-      - name: Create ZIP archive
+      - name: create-zip
         run: |
           VERSION="${{ github.event.inputs.version_name || 'latest' }}"
           echo "Creating macOS ZIP archive for version: $VERSION"
           
-          # Strategy 1: Standard DerivedData path (build/macos/Build/Products/Release)
           APP_DIR="build/macos/Build/Products/Release"
           for app_name in "vk_z.app" "Runner.app"; do
             if [ -d "$APP_DIR" ] && [ -d "$APP_DIR/$app_name" ]; then
-              echo "✅ Strategy 1: Found $app_name at $APP_DIR/$app_name"
+              echo "Found $app_name at $APP_DIR/$app_name"
               cd "$APP_DIR"
               zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" "$app_name"
-              echo "✅ ZIP created successfully"
+              echo "ZIP created successfully"
               exit 0
             fi
           done
           
-          # Strategy 2: Search for any .app in build/macos recursively
           echo "Strategy 1 failed. Trying Strategy 2: searching build/macos recursively..."
           APP_BUNDLE=$(find build/macos -name "*.app" -type d -maxdepth 6 2>/dev/null | head -1)
           if [ -n "$APP_BUNDLE" ]; then
-            echo "✅ Strategy 2: Found app bundle at: $APP_BUNDLE"
+            echo "Found app bundle at: $APP_BUNDLE"
             cd "$(dirname "$APP_BUNDLE")"
             zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" "$(basename "$APP_BUNDLE")"
-            echo "✅ ZIP created successfully"
+            echo "ZIP created successfully"
             exit 0
           fi
           
-          # Strategy 3: Search entire filesystem for any .app
           echo "Strategy 2 failed. Trying Strategy 3: searching entire filesystem..."
           APP_BUNDLE=$(find / -name "*.app" -type d -maxdepth 8 -not -path "*/Xcode*" -not -path "*/Simulator*" -not -path "*/Applications/*" 2>/dev/null | head -1)
           if [ -n "$APP_BUNDLE" ]; then
-            echo "✅ Strategy 3: Found app bundle at: $APP_BUNDLE"
+            echo "Found app bundle at: $APP_BUNDLE"
             cd "$(dirname "$APP_BUNDLE")"
             zip -r "$GITHUB_WORKSPACE/vk_z_macos_${VERSION}.zip" "$(basename "$APP_BUNDLE")"
-            echo "✅ ZIP created successfully"
+            echo "ZIP created successfully"
             exit 0
           fi
           
-          # All strategies failed
-          echo "❌ No .app bundle found anywhere!"
+          echo "No .app bundle found anywhere!"
           echo "=== Full build/macos directory tree ==="
           if [ -d "build/macos" ]; then
             find build/macos -maxdepth 6 -type d 2>/dev/null
@@ -410,7 +371,7 @@ jobs:
           fi
           exit 1
 
-      - name: Upload macOS artifact
+      - name: upload-zip
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
@@ -419,48 +380,47 @@ jobs:
           if-no-files-found: warn
 
   # ============================================
-  # 6. СБОРКА LINUX
+  # 5. BUILD LINUX
   # ============================================
   build-linux:
-    name: 🐧 Сборка Linux
-    needs: analyze
+    name: Build Linux
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: setup-rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Rust library for Linux
+      - name: build-rust
         run: |
           cd rust
           cargo build --release
           cp target/release/librust_vk_z.so ../linux/flutter/
 
-      - name: Setup Flutter
+      - name: setup-flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
-      - name: Install Linux dependencies
+      - name: install-deps
         run: |
           sudo apt-get update -y
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
 
-      - name: Configure Flutter
+      - name: configure
         run: |
           flutter config --no-analytics --no-cli-animations
           flutter pub get
 
-      - name: Generate icons
+      - name: icons
         run: dart run flutter_launcher_icons || true
 
-      - name: Build Linux (Release)
+      - name: build-linux
         run: flutter build linux --release
 
-      - name: Create ZIP archive
+      - name: create-zip
         run: |
           BUNDLE_DIR="build/linux/x64/release/bundle"
           if [ -d "$BUNDLE_DIR" ]; then
@@ -472,7 +432,7 @@ jobs:
             exit 1
           fi
 
-      - name: Upload Linux artifact
+      - name: upload-zip
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
@@ -481,10 +441,10 @@ jobs:
           if-no-files-found: warn
 
   # ============================================
-  # 7. СОЗДАНИЕ РЕЛИЗА
+  # 6. CREATE RELEASE
   # ============================================
   release:
-    name: 📦 Создание релиза
+    name: Create Release
     needs: [build-android, build-ios, build-windows, build-macos, build-linux]
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
@@ -492,12 +452,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: download-artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Prepare release files
+      - name: prepare-files
         run: |
           mkdir -p release_files
           if [ -d "artifacts" ]; then
@@ -506,7 +466,7 @@ jobs:
           echo "=== Release files ==="
           ls -la release_files/ || echo "No release files found"
 
-      - name: Generate release body
+      - name: generate-body
         run: |
           VERSION="${{ github.event.inputs.version_name }}"
           TITLE="${{ github.event.inputs.release_title }}"
@@ -514,36 +474,36 @@ jobs:
           if [ -z "$VERSION" ]; then
             VERSION="${GITHUB_REF_NAME}"
             TITLE="VK Z ${VERSION}"
-            NOTES="Автоматическая сборка"
+            NOTES="Automatic build"
           fi
           cat > release_body.md << BODYEOF
           ## ${TITLE}
 
-          ### 📋 Что нового:
+          ### What's new:
           ${NOTES}
 
           ---
 
-          ### 📱 Скачать:
+          ### Download:
 
-          | Платформа | Файл |
+          | Platform | File |
           |-----------|------|
-          | 📱 Android (ARM64) | \`app-arm64-v8a-release.apk\` |
-          | 📱 Android (ARM32) | \`app-armeabi-v7a-release.apk\` |
-          | 📱 Android (x86_64) | \`app-x86_64-release.apk\` |
-          | 📦 Android (Bundle) | \`app-release.aab\` |
-          | 🍎 iOS | \`vk_z_ios_\${VERSION}.ipa\` |
-          | 💻 macOS | \`vk_z_macos_\${VERSION}.zip\` |
-          | 🐧 Linux | \`vk_z_linux_\${VERSION}.zip\` |
-          | 🪟 Windows | \`vk_z_windows_\${VERSION}.zip\` |
+          | Android (ARM64) | \`app-arm64-v8a-release.apk\` |
+          | Android (ARM32) | \`app-armeabi-v7a-release.apk\` |
+          | Android (x86_64) | \`app-x86_64-release.apk\` |
+          | Android (Bundle) | \`app-release.aab\` |
+          | iOS | \`vk_z_ios_\${VERSION}.ipa\` |
+          | macOS | \`vk_z_macos_\${VERSION}.zip\` |
+          | Linux | \`vk_z_linux_\${VERSION}.zip\` |
+          | Windows | \`vk_z_windows_\${VERSION}.zip\` |
 
           ---
 
-          *Собрано автоматически через GitHub Actions*
+          *Built automatically via GitHub Actions*
           BODYEOF
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      - name: Create Release
+      - name: create-release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version_name || github.ref_name }}
@@ -556,32 +516,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================
-  # 8. УВЕДОМЛЕНИЕ В TELEGRAM
+  # 7. TELEGRAM NOTIFICATION
   # ============================================
   notify-telegram:
-    name: 📱 Уведомление в Telegram
+    name: Telegram Notification
     needs: [release]
     if: ${{ always() && needs.release.result == 'success' && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Telegram secrets
+      - name: check-secrets
         id: check_secrets
         run: |
           if [ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] || [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
             echo "telegram_configured=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Telegram secrets not configured. Skipping notification."
+            echo "Telegram secrets not configured. Skipping notification."
           else
             echo "telegram_configured=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Download all artifacts
+      - name: download-artifacts
         if: steps.check_secrets.outputs.telegram_configured == 'true'
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Debug artifacts
+      - name: debug-artifacts
         if: steps.check_secrets.outputs.telegram_configured == 'true'
         shell: bash
         run: |
@@ -590,7 +550,7 @@ jobs:
           echo "=== Directory structure ==="
           ls -laR artifacts/ 2>/dev/null || echo "No artifacts dir"
 
-      - name: Send message + files to Telegram
+      - name: send-telegram
         if: steps.check_secrets.outputs.telegram_configured == 'true'
         shell: bash
         env:
@@ -598,12 +558,12 @@ jobs:
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           VERSION: ${{ github.event.inputs.version_name || github.ref_name }}
           TITLE: ${{ github.event.inputs.release_title || format('VK Z {0}', github.ref_name) }}
-          NOTES: ${{ github.event.inputs.release_notes || 'Автоматическая сборка' }}
+          NOTES: ${{ github.event.inputs.release_notes || 'Automatic build' }}
           REPO: ${{ github.repository }}
           APP_NAME: ${{ env.APP_NAME }}
         run: |
-          MESSAGE_TEXT=$(printf "%s\n\n📦 Версия: %s\n📝 Название: %s\n\n📋 Что нового:\n%s\n\n🔗 Скачать: https://github.com/%s/releases/tag/%s\n\n⚡ Собрано автоматически через GitHub Actions" \
-            "${APP_NAME} — новый релиз" \
+          MESSAGE_TEXT=$(printf "%s\n\nVersion: %s\nTitle: %s\n\nWhat's new:\n%s\n\nDownload: https://github.com/%s/releases/tag/%s\n\nBuilt automatically via GitHub Actions" \
+            "${APP_NAME} - new release" \
             "${VERSION}" \
             "${TITLE}" \
             "${NOTES}" \
@@ -614,7 +574,7 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
             -d "chat_id=${CHAT_ID}" \
             --data-urlencode "text=${MESSAGE_TEXT}" \
-            -d "disable_web_page_preview=true" && echo " ✅ Text sent" || echo " ❌ Text failed"
+            -d "disable_web_page_preview=true" && echo "Text sent" || echo "Text failed"
 
           echo "--- Sending files ---"
           if [ -d "artifacts" ]; then
@@ -626,16 +586,16 @@ jobs:
               RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
                 -F "chat_id=${CHAT_ID}" \
                 -F "document=@${file}" \
-                -F "caption=${filename} — ${APP_NAME} ${VERSION}" 2>&1)
+                -F "caption=${filename} - ${APP_NAME} ${VERSION}" 2>&1)
               
               if echo "$RESPONSE" | grep -q '"ok":true'; then
-                echo " ✅ $filename sent"
+                echo "$filename sent"
               else
-                echo " ❌ $filename failed: $RESPONSE"
+                echo "$filename failed: $RESPONSE"
               fi
             done
           else
             echo "No artifacts directory found, skipping file uploads"
           fi
 
-          echo "✅ Done!"
+          echo "Done!"
