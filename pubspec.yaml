@@ -12,9 +12,6 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
-  # FFI for Rust bridge
-  ffi: ^2.1.0
-
   # WebView for VK OAuth
   webview_flutter: ^4.7.0
 
@@ -33,8 +30,11 @@ dependencies:
   # File system paths
   path_provider: ^2.1.2
 
-  # HTTP client with download progress
+  # HTTP client
   dio: ^5.4.0
+
+  # Secure token storage (Android Keystore / iOS Keychain)
+  flutter_secure_storage: ^9.2.4
 
   # Local storage for metadata
   hive: ^2.2.3
@@ -42,7 +42,6 @@ dependencies:
 
   # Permissions
   permission_handler: ^11.3.0
-  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
