@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import '../services/vk_auth_service.dart';
 import '../services/vk_config.dart';
 import '../providers/music_provider.dart';
-import 'package:provider/provider.dart';
 
+/// Экран входа с поддержкой:
+/// 1. Вход по номеру телефона (как в Music-M)
+/// 2. Ввод токена вручную (запасной вариант)
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,106 +15,148 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  WebViewController? _controller;
-  bool _isLoading = false;
-  bool _showWebView = false;
-  String? _errorMessage;
-  bool _webViewAvailable = true;
+  final _vkAuth = VkAuthService();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _codeController = TextEditingController();
   final _tokenUrlController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _initWebView();
-  }
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _successMessage;
+
+  // Auth flow state
+  String? _login;
+  String? _sid;
+  bool _needsPassword = false;
+  bool _needsCode = false;
+  String? _codeLength;
 
   @override
   void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _codeController.dispose();
     _tokenUrlController.dispose();
     super.dispose();
   }
 
-  void _initWebView() {
+  Future<void> _validateAccount() async {
+    final login = _phoneController.text.trim();
+    if (login.isEmpty) {
+      setState(() => _errorMessage = 'Введите номер телефона или email');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+
     try {
-      _controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageStarted: (url) {
-              if (mounted) {
-                setState(() {
-                  _isLoading = true;
-                  _errorMessage = null;
-                });
-              }
-              _checkForToken(url);
-            },
-            onPageFinished: (url) {
-              if (mounted) {
-                setState(() => _isLoading = false);
-              }
-              if (!_checkForToken(url)) {
-                _checkForAuthError(url);
-              }
-            },
-            onWebResourceError: (error) {
-              debugPrint('WebView error: ${error.description} (code: ${error.errorCode}, type: ${error.errorType})');
-              if (error.isForMainFrame == true) {
-                if (mounted) {
-                  setState(() {
-                    _errorMessage = 'Не удалось загрузить страницу авторизации.\n'
-                        'Проверьте подключение к интернету.';
-                    _isLoading = false;
-                  });
-                }
-              }
-            },
-          ),
-        );
+      final result = await _vkAuth.validateAccount(login);
+      _login = login;
+      _sid = result.sid;
+
+      if (result.needsPassword || result.hasPasswordFlow) {
+        setState(() {
+          _needsPassword = true;
+          _needsCode = false;
+          _isLoading = false;
+          _successMessage = 'Аккаунт найден. Введите пароль.';
+        });
+      } else if (result.needsValidation) {
+        // Сразу запрашиваем код (без пароля)
+        setState(() {
+          _needsPassword = false;
+          _needsCode = true;
+          _isLoading = false;
+          _successMessage = 'На ваш телефон отправлен код подтверждения';
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Неизвестный способ авторизации: ${result.flowName}';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      debugPrint('WebView not available on this platform: $e');
-      _webViewAvailable = false;
+      setState(() {
+        _errorMessage = 'Ошибка: $e';
+        _isLoading = false;
+      });
     }
   }
 
-  Future<void> _startAuth() async {
-    if (_webViewAvailable && _controller != null) {
-      // Use WebView on mobile platforms
-      setState(() {
-        _showWebView = true;
-        _errorMessage = null;
-        _isLoading = true;
-      });
-
-      try {
-        await _controller!.clearCache();
-        await _controller!.clearLocalStorage();
-        await _controller!.loadRequest(Uri.parse(VkConfig.oAuthUrl));
-      } catch (e) {
-        debugPrint('WebView load error: $e');
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Ошибка загрузки: $e';
-            _isLoading = false;
-          });
-        }
-      }
-    } else {
-      // Use system browser on desktop platforms
-      final uri = Uri.parse(VkConfig.oAuthUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        if (mounted) {
-          _showManualTokenDialog();
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Не удалось открыть браузер для авторизации.';
-          });
-        }
-      }
+  Future<void> _authorizeWithPassword() async {
+    final password = _passwordController.text.trim();
+    if (password.isEmpty) {
+      setState(() => _errorMessage = 'Введите пароль');
+      return;
     }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _vkAuth.authorizeWithPassword(
+        login: _login!,
+        sid: _sid!,
+        password: password,
+      );
+      _onAuthSuccess(result);
+    } on VkAuthValidationException catch (e) {
+      setState(() {
+          _needsCode = true;
+          _codeLength = '6';
+          _isLoading = false;
+          _successMessage = 'Требуется подтверждение. Код отправлен на ${e.phoneMask ?? 'телефон'}.';
+        });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _confirmCode() async {
+    final code = _codeController.text.trim();
+    if (code.isEmpty) {
+      setState(() => _errorMessage = 'Введите код подтверждения');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _vkAuth.confirmCode(
+        login: _login!,
+        sid: _sid!,
+        code: code,
+        password: _passwordController.text.trim().isNotEmpty
+            ? _passwordController.text.trim()
+            : null,
+      );
+      _onAuthSuccess(result);
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _onAuthSuccess(AuthTokenResult result) {
+    final provider = context.read<MusicProvider>();
+    provider.setToken(result.accessToken, userId: result.userId);
+    provider.loadUserMusic();
+    Navigator.of(context).pushReplacementNamed('/home');
   }
 
   void _showManualTokenDialog() {
@@ -134,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              '1. Авторизуйся в открывшемся браузере\n'
+              '1. Авторизуйся в браузере\n'
               '2. Скопируй полный URL из адресной строки\n'
               '   (начинается с https://oauth.vk.ru/blank.html#)\n'
               '3. Вставь его в поле ниже',
@@ -181,77 +225,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _processManualToken(String input) {
     if (input.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Поле не может быть пустым. Вставьте URL с токеном.';
-        });
-      }
+      setState(() => _errorMessage = 'Поле не может быть пустым.');
       return;
     }
 
-    // Try to extract token from the pasted URL
     final token = VkConfig.extractToken(input);
     final userId = VkConfig.extractUserId(input);
 
     if (token != null) {
       context.read<MusicProvider>().setToken(token, userId: userId);
       Navigator.of(context).pushReplacementNamed('/home');
-    } else {
-      // Maybe user pasted just the token itself (not the full URL)
-      // Check if it looks like a VK token (starts with vk1/ or is alphanumeric)
-      if (input.length > 20 && !input.contains(' ')) {
-        context.read<MusicProvider>().setToken(input, userId: null);
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Не удалось извлечь токен из введённых данных.\n'
-                'Убедитесь, что вы скопировали полный URL из адресной строки.';
-          });
-        }
-      }
-    }
-  }
-
-  /// Returns true if a token was found and processed.
-  bool _checkForToken(String url) {
-    if (!url.startsWith(VkConfig.redirectUri)) return false;
-
-    final token = VkConfig.extractToken(url);
-    final userId = VkConfig.extractUserId(url);
-
-    if (token != null) {
-      context.read<MusicProvider>().setToken(token, userId: userId);
+    } else if (input.length > 20 && !input.contains(' ')) {
+      context.read<MusicProvider>().setToken(input, userId: null);
       Navigator.of(context).pushReplacementNamed('/home');
-      return true;
+    } else {
+      setState(() => _errorMessage = 'Не удалось извлечь токен.');
     }
-    return false;
   }
 
-  void _checkForAuthError(String url) {
-    if (url.contains('error=') || url.contains('error_description=')) {
-      final uri = Uri.parse(url);
-      final error = uri.queryParameters['error'] ?? '';
-      final errorDesc = uri.queryParameters['error_description'] ?? '';
-
-      if (error == 'invalid_request' && errorDesc.contains('blocked')) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Приложение VK заблокировано.\n'
-                'Создай своё приложение на https://dev.vk.ru/\n'
-                'и укажи его ID в lib/services/vk_config.dart';
-            _isLoading = false;
-          });
-        }
-      } else if (errorDesc.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Ошибка авторизации VK: $errorDesc';
-            _isLoading = false;
-          });
-        }
-      }
-    }
+  void _resetFlow() {
+    setState(() {
+      _needsPassword = false;
+      _needsCode = false;
+      _errorMessage = null;
+      _successMessage = null;
+      _login = null;
+      _sid = null;
+    });
   }
 
   @override
@@ -259,218 +259,300 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: _showWebView ? _buildWebView(theme) : _buildWelcomeScreen(theme),
-    );
-  }
-
-  Widget _buildWelcomeScreen(ThemeData theme) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF0A0A1A),
-            Color(0xFF1A1A3E),
-            Color(0xFF0A0A1A),
-          ],
-        ),
-      ),
-      child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Spacer(flex: 2),
-
-                // Иконка
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0077FF),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0077FF).withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.music_note_rounded,
-                    size: 56,
-                    color: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // VK Z
-                Text(
-                  'VK Z',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 42,
-                    letterSpacing: 2,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  'Слушай музыку из VK',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[400],
-                    fontSize: 16,
-                  ),
-                ),
-
-                const Spacer(flex: 1),
-
-                // Кнопка входа через VK
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: _startAuth,
-                    icon: const Icon(Icons.telegram, color: Colors.white),
-                    label: const Text(
-                      'Войти через VK',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0077FF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Кнопка ручного ввода токена
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: OutlinedButton.icon(
-                    onPressed: _showManualTokenDialog,
-                    icon: const Icon(Icons.keyboard, color: Colors.white70, size: 20),
-                    label: const Text(
-                      'Ввести токен вручную',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white24),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                Text(
-                  'Войдите в свой аккаунт VK,\nчтобы слушать музыку',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                    fontSize: 13,
-                  ),
-                ),
-
-                const Spacer(flex: 2),
-              ],
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0A0A1A),
+              Color(0xFF1A1A3E),
+              Color(0xFF0A0A1A),
+            ],
           ),
         ),
-      ),
-    );
-  }
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 40),
 
-  Widget _buildWebView(ThemeData theme) {
-    return Stack(
-      children: [
-        // WebView
-        if (_controller != null) WebViewWidget(controller: _controller!),
-
-        // Кнопка "Назад" сверху
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
-          left: 8,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              setState(() {
-                _showWebView = false;
-                _errorMessage = null;
-              });
-            },
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.black54,
-            ),
-          ),
-        ),
-
-        // Ошибка
-        if (_errorMessage != null)
-          Container(
-            color: Colors.black87,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.cloud_off, size: 64, color: Colors.redAccent),
-                    const SizedBox(height: 16),
-                    Text(
-                      _errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  // Иконка
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0077FF),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0077FF).withValues(alpha: 0.3),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: _startAuth,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Повторить'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0077FF),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                    child: const Icon(
+                      Icons.music_note_rounded,
+                      size: 56,
+                      color: Colors.white,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Text(
+                    'VK Z',
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 42,
+                      letterSpacing: 2,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    'Слушай музыку из VK',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.grey[400],
+                      fontSize: 16,
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Сообщение об ошибке
+                  if (_errorMessage != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                  // Сообщение об успехе
+                  if (_successMessage != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        _successMessage!,
+                        style: const TextStyle(color: Colors.greenAccent, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                  // Поле ввода номера телефона / email
+                  if (!_needsPassword && !_needsCode)
+                    _buildTextField(
+                      controller: _phoneController,
+                      hint: 'Номер телефона или email',
+                      icon: Icons.phone_android,
+                      keyboardType: TextInputType.phone,
+                    ),
+
+                  // Поле ввода пароля
+                  if (_needsPassword)
+                    _buildTextField(
+                      controller: _passwordController,
+                      hint: 'Пароль',
+                      icon: Icons.lock_outline,
+                      obscureText: true,
+                    ),
+
+                  // Поле ввода кода 2FA
+                  if (_needsCode)
+                    _buildTextField(
+                      controller: _codeController,
+                      hint: 'Код подтверждения${_codeLength != null ? ' ($_codeLength цифр)' : ''}',
+                      icon: Icons.sms,
+                      keyboardType: TextInputType.number,
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // Кнопка действия
+                  if (!_needsPassword && !_needsCode)
+                    _buildButton(
+                      text: 'Продолжить',
+                      icon: Icons.arrow_forward,
+                      onPressed: _isLoading ? null : _validateAccount,
+                    ),
+
+                  if (_needsPassword)
+                    _buildButton(
+                      text: 'Войти',
+                      icon: Icons.login,
+                      onPressed: _isLoading ? null : _authorizeWithPassword,
+                    ),
+
+                  if (_needsCode)
+                    _buildButton(
+                      text: 'Подтвердить',
+                      icon: Icons.check_circle_outline,
+                      onPressed: _isLoading ? null : _confirmCode,
+                    ),
+
+                  // Кнопка "Назад" при многошаговой авторизации
+                  if (_needsPassword || _needsCode)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: TextButton(
+                        onPressed: _resetFlow,
+                        child: const Text(
+                          'Назад',
+                          style: TextStyle(color: Colors.white54, fontSize: 14),
                         ),
                       ),
                     ),
-                  ],
-                ),
+
+                  const SizedBox(height: 24),
+
+                  // Разделитель
+                  Row(
+                    children: [
+                      const Expanded(child: Divider(color: Colors.white12)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'или',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                        ),
+                      ),
+                      const Expanded(child: Divider(color: Colors.white12)),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Кнопка ручного ввода токена
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: _showManualTokenDialog,
+                      icon: const Icon(Icons.keyboard, color: Colors.white70, size: 20),
+                      label: const Text(
+                        'Ввести токен вручную',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'Войдите в свой аккаунт VK,\nчтобы слушать музыку',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                      fontSize: 13,
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Индикатор загрузки
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 16),
+                      child: CircularProgressIndicator(color: Color(0xFF0077FF)),
+                    ),
+                ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
 
-        // Загрузка
-        if (_isLoading && _errorMessage == null)
-          Container(
-            color: Colors.black54,
-            child: const Center(
-              child: CircularProgressIndicator(color: Color(0xFF0077FF)),
-            ),
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 15),
+          prefixIcon: Icon(icon, color: Colors.grey[500], size: 22),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButton({
+    required String text,
+    required IconData icon,
+    VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white, size: 20),
+        label: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
-      ],
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF0077FF),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+          ),
+          elevation: 0,
+        ),
+      ),
     );
   }
 }

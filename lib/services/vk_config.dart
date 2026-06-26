@@ -1,9 +1,14 @@
-class VkConfig {
-  // VK App ID от Kate Mobile (рабочий, не заблокирован)
-  static const int appId = 2685278;
+import 'dart:math';
 
-  // VK API version — используем v5.131 как в Python-скрипте
-  static const String apiVersion = '5.131';
+class VkConfig {
+  // VK App ID от VK Android App (как в Music-M)
+  static const int appId = 2274003;
+
+  // VK App Secret (как в Music-M AndroidApiAuthParams)
+  static const String clientSecret = 'hHbZxrka2uZ6jB1inYsH';
+
+  // VK API version — используем v8.200 (актуальная версия VK Android App)
+  static const String apiVersion = '8.200';
 
   // VK OAuth URL (используем vk.ru, т.к. vk.com заблокирован)
   static const String authUrl = 'https://oauth.vk.ru/authorize';
@@ -14,9 +19,27 @@ class VkConfig {
   // OAuth redirect URL
   static const String redirectUri = 'https://oauth.vk.ru/blank.html';
 
-  // User-Agent как в Kate Mobile (рабочий, как в Python-скрипте)
+  // User-Agent как в VK Android App (актуальная версия)
   static const String userAgent =
-      'KateMobileAndroid/56 lite-460 (Android 4.4.2; SDK 19; x86; unknown Android SDK built for x86; en)';
+      'VKAndroidApp/8.200-99999 (Android 14; SDK 34; arm64-v8a; Pixel 8 Pro; ru; 2992x1440)';
+
+  // Заголовки как в Music-M (RestClientWithUserAgent)
+  static Map<String, String> get headers => {
+        'User-Agent': userAgent,
+        'X-VK-Android-Client': 'new',
+        'Referer': 'https://id.vk.ru/',
+        'Origin': 'https://id.vk.ru',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Site': 'same-site',
+        'Sec-Ch-Ua-Platform': '"Android"',
+        'Sec-Ch-Ua-Mobile': '?1',
+        'Sec-Ch-Ua':
+            '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+        'X-Quic': '1',
+        'Accept-Language': 'ru',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
 
   // Required permissions for music access
   static const String scope = 'audio,offline';
@@ -59,5 +82,16 @@ class VkConfig {
     final userId = uri.queryParameters['user_id'];
     if (userId != null) return int.tryParse(userId);
     return null;
+  }
+
+  /// Генерирует device_id как в Music-M (рандомный UUID)
+  static String generateDeviceId() {
+    final random = Random();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    // Форматируем как UUID: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
   }
 }

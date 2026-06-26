@@ -4,22 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Версия релиза (например, v1.0.0)'
+        description: 'Version name (e.g. v1.0.0)'
         required: true
         default: 'v1.0.0'
         type: string
       release_title:
-        description: 'ноунейм-релиз'
+        description: 'Release title'
         required: true
-        default: 'Фикс фикса 🤣🤣🤣🤣🤣🤣🤣🤣'
+        default: 'Bug fixes'
         type: string
       release_notes:
-        description: 'описание релиза'
+        description: 'Release notes'
         required: true
-        default: 'Читай название xD'
+        default: '- Bug fixes'
         type: string
       release_type:
-        description: 'Чо эт за чудо такое bruuuh'
+        description: 'Release type'
         required: true
         default: 'prerelease'
         type: choice
@@ -27,7 +27,7 @@ on:
           - prerelease
           - release
       send_telegram:
-        description: 'Отправить уведомление в тгк 📢?'
+        description: 'Send Telegram notification?'
         required: true
         default: true
         type: boolean
@@ -44,7 +44,7 @@ jobs:
   # 1. BUILD ANDROID
   # ============================================
   build-android:
-    name: 🎃 АнДрОеДы сюдыыыы)
+    name: Build Android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +95,7 @@ jobs:
   # 2. BUILD IOS
   # ============================================
   build-ios:
-    name: 🎉 ЯбЛыК 
+    name: Build iOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -146,7 +146,7 @@ jobs:
   # 3. BUILD WINDOWS
   # ============================================
   build-windows:
-    name: 🎨 Сборка под Windows
+    name: Build Windows
     runs-on: windows-latest
     continue-on-error: true
     steps:
@@ -343,7 +343,7 @@ jobs:
       - name: install-deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev
 
       - name: configure
         run: |
@@ -380,7 +380,7 @@ jobs:
   # 6. CREATE RELEASE
   # ============================================
   release:
-    name: Создать релиз и загрузить файлы 😄
+    name: Create Release
     needs: [build-android, build-ios, build-windows, build-macos, build-linux]
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
@@ -455,7 +455,7 @@ jobs:
   # 7. TELEGRAM NOTIFICATION
   # ============================================
   notify-telegram:
-    name: Отправить уведомление в тгк 📢
+    name: Telegram Notification
     needs: [release]
     if: ${{ always() && needs.release.result == 'success' && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest

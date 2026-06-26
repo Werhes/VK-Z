@@ -1,6 +1,9 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../models/track.dart';
 import '../models/playlist.dart';
 import '../models/mix.dart';
@@ -9,42 +12,37 @@ import 'vk_config.dart';
 
 /// VK API Service
 ///
-/// Чистый Dart VK API клиент на Dio.
-/// Использует прямые HTTP-запросы к VK API v5.131.
-/// Авторизация через Kate Mobile (bypass audio).
+/// Использует чистый Dart HttpClient (без Dio, без Go FFI).
+/// Все запросы — POST с form-encoded body, как в Music-M (VK Android App).
 ///
-/// API v5.131, Kate Mobile User-Agent, GET-запросы к api.vk.com/method/
-/// Прямые методы audio.* (как в Python-скрипте vk_client.py)
-///
-/// Токен хранится в flutter_secure_storage (Android Keystore / iOS Keychain).
+/// Ключевые отличия от предыдущей версии:
+/// - API v8.154 (как в VK Android App)
+/// - POST-запросы (не GET)
+/// - VK Android App User-Agent и заголовки
+/// - device_id для всех запросов
+/// - HTTP/2
 class VkApiService {
   String? _accessToken;
   int? _userId;
-  late final Dio _dio;
-  late final FlutterSecureStorage _secureStorage;
+  String? _deviceId;
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  HttpClient? _httpClient;
 
   static const String _tokenKey = 'vk_access_token';
   static const String _userIdKey = 'vk_user_id';
+  static const String _deviceIdKey = 'vk_device_id';
 
-  VkApiService() {
-    _secureStorage = const FlutterSecureStorage();
-
-    _dio = Dio(BaseOptions(
-      baseUrl: VkConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        'User-Agent': VkConfig.userAgent,
-        'Accept-Language': 'ru',
-      },
-    ));
-
-    debugPrint('📡 VK API Service initialized (Dio)');
+  VkApiService({String? deviceId}) {
+    _deviceId = deviceId;
+    _httpClient = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 30)
+      ..idleTimeout = const Duration(seconds: 10);
   }
 
   bool get isAuthorized => _accessToken != null;
   int? get userId => _userId;
   String? get accessToken => _accessToken;
+  String? get deviceId => _deviceId;
 
   void setToken(String token, {int? userId}) {
     _accessToken = token;
@@ -55,6 +53,7 @@ class VkApiService {
   void clearToken() {
     _accessToken = null;
     _userId = null;
+    _deviceId = null;
     _clearSession();
   }
 
@@ -62,12 +61,14 @@ class VkApiService {
     try {
       final token = await _secureStorage.read(key: _tokenKey);
       final userIdStr = await _secureStorage.read(key: _userIdKey);
+      final savedDeviceId = await _secureStorage.read(key: _deviceIdKey);
 
       if (token != null && token.isNotEmpty) {
         _accessToken = token;
         _userId = userIdStr != null ? int.tryParse(userIdStr) : null;
+        _deviceId = savedDeviceId ?? VkConfig.generateDeviceId();
         debugPrint(
-            'Session restored: token=${token.substring(0, 10)}..., userId=$_userId');
+            'Session restored: token=${token.substring(0, 10)}..., userId=$_userId, deviceId=$_deviceId');
         return true;
       }
     } catch (e) {
@@ -84,6 +85,9 @@ class VkApiService {
       if (_userId != null) {
         await _secureStorage.write(key: _userIdKey, value: _userId.toString());
       }
+      if (_deviceId != null) {
+        await _secureStorage.write(key: _deviceIdKey, value: _deviceId!);
+      }
     } catch (e) {
       debugPrint('Failed to save session: $e');
     }
@@ -93,58 +97,72 @@ class VkApiService {
     try {
       await _secureStorage.delete(key: _tokenKey);
       await _secureStorage.delete(key: _userIdKey);
+      await _secureStorage.delete(key: _deviceIdKey);
     } catch (e) {
       debugPrint('Failed to clear session: $e');
     }
   }
 
   /// Единая точка вызова VK API.
-  Future<dynamic> _call(String method, {Map<String, dynamic>? params}) async {
+  /// POST-запрос с form-encoded body, как в Music-M.
+  Future<dynamic> _call(String method, {Map<String, String>? params}) async {
     if (_accessToken == null) {
       throw Exception('Not authorized');
     }
 
-    final queryParams = <String, dynamic>{
-      'access_token': _accessToken,
+    // Генерируем device_id если ещё нет
+    _deviceId ??= VkConfig.generateDeviceId();
+
+    // Собираем параметры как в Music-M VkApiInvoke.TryAddRequiredParameters
+    final bodyParams = <String, String>{
       'v': VkConfig.apiVersion,
       'lang': 'ru',
+      'device_id': _deviceId!,
+      'access_token': _accessToken!,
       if (params != null) ...params,
     };
 
-    debugPrint('VK API GET: $method');
+    final url = '${VkConfig.apiBaseUrl}/$method';
+    final body = Uri(queryParameters: bodyParams).query;
+
+    debugPrint('VK API POST: $method (${bodyParams.length} params)');
 
     try {
-      final response = await _dio.get(
-        '/$method',
-        queryParameters: queryParams,
-      );
+      final request = await _httpClient!.postUrl(Uri.parse(url));
+
+      // Устанавливаем заголовки как в Music-M RestClientWithUserAgent
+      for (final entry in VkConfig.headers.entries) {
+        request.headers.set(entry.key, entry.value);
+      }
+      request.headers.set('Content-Length', body.length.toString());
+
+      // Отправляем тело
+      request.write(body);
+
+      final response = await request.close();
 
       if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode}: ${response.data}');
+        final errorBody = await response.transform(utf8.decoder).join();
+        throw Exception('HTTP ${response.statusCode}: $errorBody');
       }
 
-      final data = response.data;
+      final responseBody = await response.transform(utf8.decoder).join();
+      final data = jsonDecode(responseBody) as Map<String, dynamic>;
 
-      if (data is! Map<String, dynamic>) {
-        throw Exception('Unexpected response type: ${data.runtimeType}');
-      }
-
+      // Проверяем VK API ошибку
       if (data.containsKey('error')) {
         final error = data['error'] as Map<String, dynamic>;
-        final errorMsg =
-            'VK API Error [${error['error_code']}]: ${error['error_msg']}';
-        debugPrint(errorMsg);
-        throw Exception(errorMsg);
+        final errorCode = error['error_code'];
+        final errorMsg = error['error_msg'] ?? error['error_text'] ?? 'Unknown';
+        final errorStr = 'VK API Error [$errorCode]: $errorMsg';
+        debugPrint(errorStr);
+        throw Exception(errorStr);
       }
 
       return data['response'] ?? data;
-    } on DioException catch (e) {
-      debugPrint('Dio error: $e');
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        throw Exception('Network timeout');
-      }
-      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Network error: $e');
     }
   }
 
@@ -169,7 +187,7 @@ class VkApiService {
     int offset = 0,
     int count = 100,
   }) async {
-    final params = <String, dynamic>{
+    final params = <String, String>{
       'owner_id': (ownerId ?? _userId).toString(),
       'offset': offset.toString(),
       'count': count.toString(),
@@ -190,7 +208,7 @@ class VkApiService {
     int offset = 0,
     int count = 50,
   }) async {
-    final params = <String, dynamic>{
+    final params = <String, String>{
       'q': query,
       'count': count.toString(),
       'offset': offset.toString(),
@@ -210,7 +228,7 @@ class VkApiService {
   Future<List<Playlist>> getPlaylists({
     int? ownerId,
   }) async {
-    final params = <String, dynamic>{
+    final params = <String, String>{
       'owner_id': (ownerId ?? _userId).toString(),
       'count': '200',
     };
@@ -228,7 +246,7 @@ class VkApiService {
     int offset = 0,
     int count = 2000,
   }) async {
-    final params = <String, dynamic>{
+    final params = <String, String>{
       'owner_id': ownerId.toString(),
       'playlist_id': playlistId.toString(),
       'offset': offset.toString(),
@@ -251,7 +269,7 @@ class VkApiService {
     String? targetAudio,
     int count = 50,
   }) async {
-    final params = <String, dynamic>{
+    final params = <String, String>{
       'count': count.toString(),
       'shuffle': '1',
     };
@@ -276,7 +294,7 @@ class VkApiService {
     int count = 50,
   }) async {
     try {
-      final params = <String, dynamic>{
+      final params = <String, String>{
         'mix_id': mixId,
         'count': count.toString(),
       };
@@ -292,7 +310,7 @@ class VkApiService {
 
   Future<MixSettingsRoot?> getStreamMixSettings(String mixId) async {
     try {
-      final params = <String, dynamic>{
+      final params = <String, String>{
         'mix_id': mixId,
       };
 
@@ -339,7 +357,7 @@ class VkApiService {
     required List<String> audioIds,
   }) async {
     try {
-      final params = <String, dynamic>{
+      final params = <String, String>{
         'audios': audioIds.join(','),
       };
 
