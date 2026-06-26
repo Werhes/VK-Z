@@ -1,30 +1,39 @@
 import 'dart:math';
 
 class VkConfig {
-  // VK App ID от Kate Mobile — имеет доступ к audio API
+  // VK App ID от VK Kate API (рабочий, не заблокирован)
   static const int appId = 2685278;
 
-  // VK API version — используем 5.131 как в Python-скрипте
-  // На этой версии audio.* методы работают с Kate Mobile токеном
-  static const String apiVersion = '5.131';
+  // VK API version - используем 8.x как в VK Android App
+  static const String apiVersion = '8.154';
 
-  // VK OAuth URL
+  // VK OAuth URL (используем vk.ru, т.к. vk.com заблокирован)
   static const String authUrl = 'https://oauth.vk.ru/authorize';
 
-  // VK API base URL
+  // VK API base URL (используем vk.ru)
   static const String apiBaseUrl = 'https://api.vk.ru/method';
 
   // OAuth redirect URL
   static const String redirectUri = 'https://oauth.vk.ru/blank.html';
 
-  // User-Agent как в Kate Mobile (Python-скрипт)
+  // User-Agent как в VK Android App
   static const String userAgent =
-      'KateMobileAndroid/56 lite-460 (Android 4.4.2; SDK 19; x86; unknown Android SDK built for x86; en)';
+      'VKAndroidApp/8.154-99999 (Android 12; SDK 32; arm64-v8a; Pixel 6; ru; 2960x1440)';
 
-  // Kate Mobile не требует дополнительных заголовков
+  // Дополнительные заголовки как в VK Android App (из Music-M / VkNet.AudioBypassService)
   static const Map<String, String> extraHeaders = {
     'User-Agent': userAgent,
-    'Accept-Language': 'ru',
+    'X-VK-Android-Client': 'new',
+    'Referer': 'https://id.vk.ru/',
+    'Origin': 'https://id.vk.ru',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Site': 'same-site',
+    'Sec-Ch-Ua-Platform': '"Android"',
+    'Sec-Ch-Ua-Mobile': '?1',
+    'Sec-Ch-Ua':
+        '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+    'X-Quic': '1',
   };
 
   // Required permissions for music access

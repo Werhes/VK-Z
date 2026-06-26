@@ -10,6 +10,7 @@ import 'my_music_screen.dart';
 import 'settings_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'mix_settings_screen.dart';
+import 'mix_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -416,6 +417,94 @@ class _SearchDisplayDialogState extends State<_SearchDisplayDialog> {
   }
 }
 
+/// Виджет VK Mix — большой блок "Слушать VK Микс" как в FlutterVK.
+class _VkMixBlock extends StatelessWidget {
+  final MusicProvider provider;
+  final Function(Track, List<Track>) playTrack;
+
+  const _VkMixBlock({required this.provider, required this.playTrack});
+
+  @override
+  Widget build(BuildContext context) {
+    final mix = provider.mix;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blueGrey[800]!.withValues(alpha: 0.6),
+            Colors.blueGrey[900]!.withValues(alpha: 0.8),
+            Colors.black.withValues(alpha: 0.9),
+          ],
+        ),
+      ),
+      child: InkWell(
+        onTap: mix != null && mix.tracks.isNotEmpty
+            ? () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => MixScreen(mix: mix),
+                  ),
+                );
+              }
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Кнопка shuffle/play.
+              IconButton.filledTonal(
+                iconSize: 36,
+                onPressed: mix != null && mix.tracks.isNotEmpty
+                    ? () {
+                        final shuffled = List<Track>.from(mix.tracks)..shuffle();
+                        playTrack(shuffled.first, shuffled);
+                      }
+                    : null,
+                icon: const Icon(Icons.shuffle),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // "Слушать VK Микс".
+              Text(
+                mix?.title ?? 'VK Микс',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // Описание.
+              Text(
+                mix?.description ?? 'Персональная подборка для вас',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Главная страница музыки (как FlutterVK MusicRoute)
 class _MusicHomeTab extends StatefulWidget {
   final MusicProvider provider;
@@ -541,7 +630,14 @@ class _MusicHomeTabState extends State<_MusicHomeTab> {
                 ),
               ],
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 24),
+
+            // Блок VK Микс (как FlutterVK LivePlaylistWidget).
+            _VkMixBlock(
+              provider: provider,
+              playTrack: widget.playTrack,
+            ),
+            const SizedBox(height: 24),
 
             // Фильтры.
             _ChipFilters(

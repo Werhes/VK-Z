@@ -6,17 +6,17 @@ on:
       version_name:
         description: 'Название версии (например v1.0.1)'
         required: true
-        default: 'v1.0.3'
+        default: 'v1.0.6'
         type: string
       release_title:
         description: 'Заголовок релиза'
         required: true
-        default: 'Новый релиз'
+        default: 'Token fix'
         type: string
       release_notes:
         description: 'Описание релиза (что нового)'
         required: true
-        default: '• Исправлены баги'
+        default: '• Исправил баги'
         type: string
       release_type:
         description: 'Тип релиза'
@@ -29,7 +29,7 @@ on:
       send_telegram:
         description: 'Отправить уведомление в Telegram?'
         required: true
-        default: true
+        default: false
         type: boolean
 
   push:
