@@ -29,7 +29,7 @@ on:
       send_telegram:
         description: 'Отправить уведомление в Telegram?'
         required: true
-        default: false
+        default: true
         type: boolean
 
   # Автосборка отключена — только ручной запуск через workflow_dispatch
@@ -76,6 +76,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27
+
+      - name: Build Rust library for Android
+        run: |
+          cd rust
+          # Install cargo-ndk for cross-compilation
+          cargo install cargo-ndk
+          # Build for all Android architectures
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../android/app/src/main/jniLibs build --release
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -129,6 +147,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Build Rust library for iOS
+        run: |
+          cd rust
+          cargo build --release --target aarch64-apple-ios
+          # Copy to iOS project
+          mkdir -p ../ios/Runner
+          cp target/aarch64-apple-ios/release/librust_vk_z.a ../ios/Runner/
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -159,7 +190,6 @@ jobs:
       - name: Create IPA
         run: |
           mkdir -p build/ios/ipa
-          # Create a Payload directory and zip it as an IPA
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
           zip -r ../../../vk_z_ios_${{ github.event.inputs.version_name || 'latest' }}.ipa Payload/
@@ -173,7 +203,7 @@ jobs:
           if-no-files-found: warn
 
   # ============================================
-  # 4. СБОРКА WINDOWS (опционально)
+  # 4. СБОРКА WINDOWS
   # ============================================
   build-windows:
     name: 🪟 Сборка Windows
@@ -182,6 +212,15 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust library for Windows
+        run: |
+          cd rust
+          cargo build --release
+          copy target\release\rust_vk_z.dll ..\windows\runner\
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -206,7 +245,6 @@ jobs:
           $version = "${{ github.event.inputs.version_name }}"
           if (-not $version) { $version = "latest" }
           
-          # Try different possible build output paths
           $paths = @(
             "build\windows\x64\runner\Release",
             "build\windows\runner\Release",
@@ -265,6 +303,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Build Rust library for macOS
+        run: |
+          cd rust
+          # Build universal binary (ARM64 + x86_64)
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+          mkdir -p target/universal/release
+          lipo -create \
+            target/aarch64-apple-darwin/release/librust_vk_z.dylib \
+            target/x86_64-apple-darwin/release/librust_vk_z.dylib \
+            -output target/universal/release/librust_vk_z.dylib
+          # Copy to macOS Runner
+          cp target/universal/release/librust_vk_z.dylib ../macos/Runner/
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -302,10 +359,6 @@ jobs:
             echo "Contents of build/ directory:"
             ls -la build/ 2>/dev/null || echo "build/ directory not found"
           fi
-          echo ""
-          echo "=== Searching for Runner.app anywhere ==="
-          find /Users/runner -name "Runner.app" -maxdepth 8 -type d 2>/dev/null || echo "Runner.app not found in /Users/runner"
-          find / -name "Runner.app" -maxdepth 5 -type d 2>/dev/null || echo "Runner.app not found at root level"
 
       - name: Create ZIP archive
         run: |
@@ -376,6 +429,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust library for Linux
+        run: |
+          cd rust
+          cargo build --release
+          cp target/release/librust_vk_z.so ../linux/flutter/
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -424,7 +486,6 @@ jobs:
   release:
     name: 📦 Создание релиза
     needs: [build-android, build-ios, build-windows, build-macos, build-linux]
-    # Запускается только при workflow_dispatch или при пуше тега v*
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
 
@@ -440,7 +501,6 @@ jobs:
         run: |
           mkdir -p release_files
           if [ -d "artifacts" ]; then
-            # v4 download-artifact creates subdirectories per artifact name
             find artifacts -type f \( -name "*.apk" -o -name "*.aab" -o -name "*.ipa" -o -name "*.zip" \) -exec cp {} release_files/ \; 2>/dev/null || true
           fi
           echo "=== Release files ==="
@@ -451,7 +511,6 @@ jobs:
           VERSION="${{ github.event.inputs.version_name }}"
           TITLE="${{ github.event.inputs.release_title }}"
           NOTES="${{ github.event.inputs.release_notes }}"
-          # On push events (tag), use git tag info
           if [ -z "$VERSION" ]; then
             VERSION="${GITHUB_REF_NAME}"
             TITLE="VK Z ${VERSION}"
@@ -497,7 +556,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================
-  # 6. УВЕДОМЛЕНИЕ В TELEGRAM
+  # 8. УВЕДОМЛЕНИЕ В TELEGRAM
   # ============================================
   notify-telegram:
     name: 📱 Уведомление в Telegram
@@ -543,7 +602,6 @@ jobs:
           REPO: ${{ github.repository }}
           APP_NAME: ${{ env.APP_NAME }}
         run: |
-          # Build message with printf to handle multi-line properly
           MESSAGE_TEXT=$(printf "%s\n\n📦 Версия: %s\n📝 Название: %s\n\n📋 Что нового:\n%s\n\n🔗 Скачать: https://github.com/%s/releases/tag/%s\n\n⚡ Собрано автоматически через GitHub Actions" \
             "${APP_NAME} — новый релиз" \
             "${VERSION}" \
@@ -552,17 +610,14 @@ jobs:
             "${REPO}" \
             "${VERSION}")
 
-          # Send text message (no parse_mode = plain text, avoids formatting issues)
           echo "Sending text message..."
           curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
             -d "chat_id=${CHAT_ID}" \
             --data-urlencode "text=${MESSAGE_TEXT}" \
             -d "disable_web_page_preview=true" && echo " ✅ Text sent" || echo " ❌ Text failed"
 
-          # Send files
           echo "--- Sending files ---"
           if [ -d "artifacts" ]; then
-            # Send all APK, AAB, IPA, and ZIP files
             find artifacts -type f \( -name "*.apk" -o -name "*.aab" -o -name "*.ipa" -o -name "*.zip" \) 2>/dev/null | while read file; do
               filename=$(basename "$file")
               filesize=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "?")

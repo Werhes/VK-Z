@@ -12,8 +12,8 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
-  # HTTP client
-  http: ^1.2.1
+  # FFI for Rust bridge
+  ffi: ^2.1.0
 
   # WebView for VK OAuth
   webview_flutter: ^4.7.0

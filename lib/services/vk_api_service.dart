@@ -1,47 +1,68 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/track.dart';
 import '../models/playlist.dart';
 import '../models/mix.dart';
 import '../models/mix_settings.dart';
 import 'vk_config.dart';
+import 'rust_vk_api.dart';
 
 /// VK API Service
 ///
-/// Использует тот же подход, что и рабочий Python-скрипт vk_client.py:
+/// Использует Rust VK API клиент через FFI (если библиотека загружена),
+/// иначе fallback на чистый Dart HttpClient.
+///
+/// Rust-клиент — прямой порт рабочего Python-скрипта vk_client.py:
 /// - API v5.131
 /// - Kate Mobile User-Agent
 /// - GET-запросы к api.vk.ru/method/
-/// - Прямые методы audio.* (не catalog.getAudio)
-/// - Без лишних заголовков и device_id
+/// - Прямые методы audio.*
 class VkApiService {
   String? _accessToken;
   int? _userId;
+  HttpClient? _dartClient;
+  final RustVkApi _rustApi = RustVkApi.instance;
+  bool _useRust = false;
 
   static const String _tokenKey = 'vk_access_token';
   static const String _userIdKey = 'vk_user_id';
+
+  VkApiService() {
+    // Пытаемся загрузить Rust-библиотеку
+    _useRust = _rustApi.tryLoad();
+    if (_useRust) {
+      debugPrint('🚀 Using Rust VK API client');
+    } else {
+      debugPrint('📡 Using Dart HttpClient fallback');
+      _dartClient = HttpClient()
+        ..userAgent = VkConfig.userAgent
+        ..connectionTimeout = const Duration(seconds: 30)
+        ..idleTimeout = const Duration(seconds: 15);
+    }
+  }
 
   bool get isAuthorized => _accessToken != null;
   int? get userId => _userId;
   String? get accessToken => _accessToken;
 
-  /// Сохраняет токен и userId в памяти и в shared_preferences
   void setToken(String token, {int? userId}) {
     _accessToken = token;
     _userId = userId;
     _saveSession();
+    // Передаём токен в Rust, если он загружен
+    if (_useRust) {
+      _rustApi.setToken(token, userId);
+    }
   }
 
-  /// Очищает токен из памяти и из shared_preferences
   void clearToken() {
     _accessToken = null;
     _userId = null;
     _clearSession();
   }
 
-  /// Пытается восстановить сессию из shared_preferences
   Future<bool> tryRestoreSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -51,6 +72,9 @@ class VkApiService {
       if (token != null && token.isNotEmpty) {
         _accessToken = token;
         _userId = userId;
+        if (_useRust) {
+          _rustApi.setToken(token, userId);
+        }
         debugPrint(
             'Session restored: token=${token.substring(0, 10)}..., userId=$userId');
         return true;
@@ -61,7 +85,6 @@ class VkApiService {
     return false;
   }
 
-  /// Сохраняет сессию в shared_preferences
   Future<void> _saveSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -76,7 +99,6 @@ class VkApiService {
     }
   }
 
-  /// Очищает сессию из shared_preferences
   Future<void> _clearSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -88,12 +110,30 @@ class VkApiService {
   }
 
   /// Единая точка вызова VK API.
-  /// Использует GET-запрос как в Python-скрипте (Kate Mobile, v5.131).
+  /// Сначала пробует Rust, если не получилось — Dart HttpClient.
   Future<dynamic> _call(String method, {Map<String, String>? params}) async {
     if (_accessToken == null) {
       throw Exception('Not authorized');
     }
 
+    // Пробуем Rust
+    if (_useRust) {
+      try {
+        final result = await _rustApi.callRust(method, params ?? {});
+        if (result != null) {
+          return result;
+        }
+      } catch (e) {
+        debugPrint('Rust call failed, falling back to Dart: $e');
+      }
+    }
+
+    // Fallback: Dart HttpClient
+    return _dartCall(method, params: params);
+  }
+
+  /// Dart HttpClient реализация (как aiohttp в Python)
+  Future<dynamic> _dartCall(String method, {Map<String, String>? params}) async {
     final queryParams = <String, String>{
       'access_token': _accessToken!,
       'v': VkConfig.apiVersion,
@@ -105,36 +145,72 @@ class VkApiService {
         .replace(queryParameters: queryParams);
 
     debugPrint('VK API GET: $method');
+    debugPrint('URL: $uri');
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'User-Agent': VkConfig.userAgent,
-        'Accept-Language': 'ru',
-      },
-    );
+    try {
+      final request = await _dartClient!.getUrl(uri);
+      request.headers.set('Accept-Language', 'ru');
 
-    if (response.statusCode != 200) {
-      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+
+      debugPrint('Response status: ${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        debugPrint('HTTP error body: $body');
+        throw Exception('HTTP ${response.statusCode}: $body');
+      }
+
+      final dynamic decoded;
+      try {
+        decoded = jsonDecode(body);
+      } catch (e) {
+        debugPrint('JSON decode error: $e');
+        debugPrint('Raw body (first 500): ${body.substring(0, body.length > 500 ? 500 : body.length)}');
+        throw Exception('Failed to decode JSON response: $e');
+      }
+
+      if (decoded is! Map<String, dynamic>) {
+        debugPrint('Response is not a Map: ${decoded.runtimeType}');
+        throw Exception('Unexpected response type: ${decoded.runtimeType}');
+      }
+
+      if (decoded.containsKey('error')) {
+        final error = decoded['error'] as Map<String, dynamic>;
+        final errorMsg = 'VK API Error [${error['error_code']}]: ${error['error_msg']}';
+        debugPrint(errorMsg);
+        throw Exception(errorMsg);
+      }
+
+      final result = decoded['response'] ?? decoded;
+      debugPrint('Response type: ${result.runtimeType}');
+      if (result is Map) {
+        debugPrint('Response keys: ${result.keys.join(', ')}');
+        if (result.containsKey('items')) {
+          final items = result['items'];
+          debugPrint('Items type: ${items.runtimeType}, count: ${items is List ? items.length : 'N/A'}');
+        }
+        if (result.containsKey('count')) {
+          debugPrint('Count: ${result['count']}');
+        }
+      } else if (result is List) {
+        debugPrint('Response is List with ${result.length} items');
+      }
+
+      return result;
+    } on SocketException catch (e) {
+      debugPrint('Socket error: $e');
+      throw Exception('Network error: $e');
+    } on HttpException catch (e) {
+      debugPrint('HTTP error: $e');
+      throw Exception('HTTP error: $e');
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-
-    // Проверка на ошибку API
-    if (data.containsKey('error')) {
-      final error = data['error'] as Map<String, dynamic>;
-      throw Exception(
-          'VK API Error [${error['error_code']}]: ${error['error_msg']}');
-    }
-
-    return data['response'] ?? data;
   }
 
   // ==========================================
   // User info
   // ==========================================
 
-  /// Получить информацию о текущем пользователе
   Future<Map<String, dynamic>> getCurrentUser() async {
     final data = await _call('users.get', params: {'fields': 'photo_100'});
     if (data is List && data.isNotEmpty) {
@@ -147,7 +223,6 @@ class VkApiService {
   // Tracks
   // ==========================================
 
-  /// Получить аудиозаписи пользователя
   Future<List<Track>> getTracks({
     int? ownerId,
     int offset = 0,
@@ -161,6 +236,7 @@ class VkApiService {
 
     final data = await _call('audio.get', params: params);
     final items = _extractItems(data);
+    debugPrint('Parsed ${items.length} tracks from audio.get');
     return items.map((e) => Track.fromJson(e)).toList();
   }
 
@@ -168,7 +244,6 @@ class VkApiService {
   // Search
   // ==========================================
 
-  /// Поиск аудиозаписей
   Future<List<Track>> searchTracks({
     required String query,
     int offset = 0,
@@ -179,7 +254,7 @@ class VkApiService {
       'count': count.toString(),
       'offset': offset.toString(),
       'auto_complete': '1',
-      'sort': '2', // по популярности
+      'sort': '2',
     };
 
     final data = await _call('audio.search', params: params);
@@ -191,7 +266,6 @@ class VkApiService {
   // Playlists
   // ==========================================
 
-  /// Получить плейлисты пользователя
   Future<List<Playlist>> getPlaylists({
     int? ownerId,
   }) async {
@@ -202,10 +276,10 @@ class VkApiService {
 
     final data = await _call('audio.getPlaylists', params: params);
     final items = _extractItems(data);
+    debugPrint('Parsed ${items.length} playlists from audio.getPlaylists');
     return items.map((e) => Playlist.fromJson(e)).toList();
   }
 
-  /// Получить треки плейлиста
   Future<List<Track>> getPlaylistTracks({
     required int playlistId,
     required int ownerId,
@@ -232,7 +306,6 @@ class VkApiService {
   // Recommendations
   // ==========================================
 
-  /// Получить рекомендации
   Future<List<Track>> getRecommendations({
     String? targetAudio,
     int count = 50,
@@ -249,6 +322,7 @@ class VkApiService {
 
     final data = await _call('audio.getRecommendations', params: params);
     final items = _extractItems(data);
+    debugPrint('Parsed ${items.length} recommendations');
     return items.map((e) => Track.fromJson(e)).toList();
   }
 
@@ -256,7 +330,6 @@ class VkApiService {
   // VK Mix
   // ==========================================
 
-  /// Получить треки VK Mix
   Future<List<Track>> getStreamMixAudios({
     String mixId = 'common',
     int count = 50,
@@ -276,7 +349,6 @@ class VkApiService {
     }
   }
 
-  /// Получить настройки VK Mix
   Future<MixSettingsRoot?> getStreamMixSettings(String mixId) async {
     try {
       final params = <String, String>{
@@ -294,10 +366,8 @@ class VkApiService {
     }
   }
 
-  /// Получить VK Mix (микс + треки)
   Future<Mix?> getMix() async {
     try {
-      // Пробуем получить треки микса
       final tracks = await getStreamMixAudios(mixId: 'common', count: 50);
       if (tracks.isNotEmpty) {
         return Mix(
@@ -308,7 +378,6 @@ class VkApiService {
         );
       }
 
-      // Fallback: создаём микс из рекомендаций
       final recs = await getRecommendations(count: 30);
       if (recs.isNotEmpty) {
         return Mix.fromRecommendations(recs);
@@ -325,7 +394,6 @@ class VkApiService {
   // Audio by ID
   // ==========================================
 
-  /// Получить аудио по ID (формат: owner_id_audio_id)
   Future<List<Track>> getAudioById({
     required List<String> audioIds,
   }) async {
@@ -344,35 +412,29 @@ class VkApiService {
   }
 
   // ==========================================
-  // Catalog (для обратной совместимости)
+  // Catalog (заглушки для совместимости)
   // ==========================================
 
-  /// Заглушка для обратной совместимости с MusicProvider.
-  /// В новом подходе catalog не используется.
   Future<Map<String, dynamic>> getCatalog() async {
-    debugPrint('getCatalog: not used in new API approach, returning empty');
+    debugPrint('getCatalog: not used, returning empty');
     return {'response': null};
   }
 
-  /// Заглушка для обратной совместимости
   Future<List<Track>> getTracksFromCatalogData(
       Map<String, dynamic> catalog) async {
     return getTracks();
   }
 
-  /// Заглушка для обратной совместимости
   Future<List<Playlist>> getPlaylistsFromCatalogData(
       Map<String, dynamic> catalog) async {
     return getPlaylists();
   }
 
-  /// Заглушка для обратной совместимости
   Future<List<Track>> getRecommendationsFromCatalogData(
       Map<String, dynamic> catalog) async {
     return getRecommendations();
   }
 
-  /// Заглушка для обратной совместимости
   Future<Mix?> getMixFromCatalogData(Map<String, dynamic> catalog) async {
     return getMix();
   }
@@ -381,7 +443,6 @@ class VkApiService {
   // Helpers
   // ==========================================
 
-  /// Извлечь items из ответа API (может быть Map с ключом 'items' или List)
   List<Map<String, dynamic>> _extractItems(dynamic data) {
     if (data is List) {
       return data.whereType<Map<String, dynamic>>().toList();

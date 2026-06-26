@@ -1,0 +1,4 @@
+rust_input: rust/src/lib.rs
+dart_output: lib/rust_bridge
+rust_root: rust/
+dart_root: lib/
