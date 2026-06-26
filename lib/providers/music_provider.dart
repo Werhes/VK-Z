@@ -83,22 +83,20 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Load user's music - optimized to fetch catalog once
+  // Load user's music - calls each API method directly in parallel
+  // API v5.131 with Kate Mobile token — audio.* methods work directly
   Future<void> loadUserMusic() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      // Fetch catalog once and share the result
-      final catalog = await _apiService.getCatalog();
-
-      // Parse all data from the single catalog response
+      // Call each API method directly in parallel
       final results = await Future.wait([
-        _apiService.getTracksFromCatalogData(catalog),
-        _apiService.getPlaylistsFromCatalogData(catalog),
-        _apiService.getRecommendationsFromCatalogData(catalog),
-        _apiService.getMixFromCatalogData(catalog),
+        _apiService.getTracks(),
+        _apiService.getPlaylists(),
+        _apiService.getRecommendations(),
+        _apiService.getMix(),
       ]);
 
       _tracks = results[0] as List<Track>;
