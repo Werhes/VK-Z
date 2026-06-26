@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'log_service.dart';
 import 'vk_config.dart';
 
 /// Результат валидации аккаунта (auth.validateAccount)
@@ -60,6 +60,7 @@ class VkAuthService {
   static const String _tokenKey = 'vk_access_token';
   static const String _userIdKey = 'vk_user_id';
   static const String _deviceIdKey = 'vk_device_id';
+  static const String _anonTokenKey = 'vk_anon_token';
 
   VkAuthService() {
     _httpClient = HttpClient()
@@ -70,14 +71,79 @@ class VkAuthService {
   String? _deviceId;
   String? _accessToken;
   int? _userId;
+  String? _anonymousToken;
 
   String get deviceId => _deviceId ??= VkConfig.generateDeviceId();
   String? get accessToken => _accessToken;
   int? get userId => _userId;
 
+  /// Получает анонимный токен через OAuth endpoint (как в Music-M VkAndroidAuthorizationBase.AuthAnonymousAsync).
+  /// Этот токен нужен для вызова auth.validateAccount без access_token.
+  Future<String> getAnonymousToken() async {
+    // Пробуем восстановить сохранённый
+    if (_anonymousToken != null) return _anonymousToken!;
+    final saved = await _secureStorage.read(key: _anonTokenKey);
+    if (saved != null && saved.isNotEmpty) {
+      _anonymousToken = saved;
+      return saved;
+    }
+
+    final params = <String, String>{
+      'client_id': VkConfig.appId.toString(),
+      'api_id': VkConfig.appId.toString(),
+      'client_secret': VkConfig.clientSecret,
+      'device_id': deviceId,
+      'https': 'true',
+      'lang': 'ru',
+      'v': VkConfig.apiVersion,
+    };
+
+    const url = 'https://api.vk.ru/oauth/get_anonym_token';
+    final body = Uri(queryParameters: params).query;
+
+    LogService.d('Getting anonymous token from $url', tag: 'AUTH');
+
+    final request = await _httpClient!.postUrl(Uri.parse(url));
+    for (final entry in VkConfig.headers.entries) {
+      request.headers.set(entry.key, entry.value);
+    }
+    request.headers.set('Content-Length', body.length.toString());
+    request.write(body);
+
+    final response = await request.close();
+    final responseBody = await response.transform(utf8.decoder).join();
+
+    if (response.statusCode != 200) {
+      throw Exception('HTTP ${response.statusCode}: $responseBody');
+    }
+
+    final data = jsonDecode(responseBody) as Map<String, dynamic>;
+
+    if (data.containsKey('error')) {
+      final error = data['error'] as Map<String, dynamic>;
+      final errorCode = error['error_code'];
+      final errorMsg = error['error_msg'] ?? 'Unknown';
+      throw Exception('VK Anon Token Error [$errorCode]: $errorMsg');
+    }
+
+    final anonToken = data['access_token'] as String?;
+    if (anonToken == null || anonToken.isEmpty) {
+      throw Exception('No anonymous token in response: $responseBody');
+    }
+
+    _anonymousToken = anonToken;
+    await _secureStorage.write(key: _anonTokenKey, value: anonToken);
+    LogService.i('Got anonymous token: ${anonToken.substring(0, 10)}...', tag: 'AUTH');
+    return anonToken;
+  }
+
   /// Шаг 1: Валидация аккаунта по номеру телефона или email.
   /// Вызывает auth.validateAccount как в Music-M AuthCategory.
+  /// Сначала получает анонимный токен и использует его как access_token.
   Future<ValidateAccountResult> validateAccount(String login) async {
+    // Сначала получаем анонимный токен (как в Music-M)
+    final anonToken = await getAnonymousToken();
+
     final params = <String, String>{
       'login': login,
       'force_password': 'false',
@@ -85,6 +151,7 @@ class VkAuthService {
       'flow_type': 'auth_without_password',
       'api_id': VkConfig.appId.toString(),
       'passkey_supported': 'true',
+      'access_token': anonToken, // Используем анонимный токен
     };
 
     final data = await _oauthPost('auth.validateAccount', params);
@@ -103,8 +170,9 @@ class VkAuthService {
     final hasAnother = nextStep?['has_another_verification_methods'] == true;
     final externalId = nextStep?['external_id'] as String?;
 
-    debugPrint(
-        'validateAccount: isPhone=$isPhone, flowName=$flowName, sid=$sid, nextStep=$verificationMethod');
+    LogService.i(
+        'validateAccount: isPhone=$isPhone, flowName=$flowName, sid=$sid, nextStep=$verificationMethod',
+        tag: 'AUTH');
 
     return ValidateAccountResult(
       isPhone: isPhone,
@@ -197,7 +265,7 @@ class VkAuthService {
     // Сохраняем
     await _saveSession();
 
-    debugPrint('Auth success: userId=$userId, token=${accessToken.substring(0, 10)}...');
+    LogService.i('Auth success: userId=$userId, token=${accessToken.substring(0, 10)}...', tag: 'AUTH');
 
     return AuthTokenResult(
       accessToken: accessToken,
@@ -233,6 +301,11 @@ class VkAuthService {
       final token = await _secureStorage.read(key: _tokenKey);
       final userIdStr = await _secureStorage.read(key: _userIdKey);
       final savedDeviceId = await _secureStorage.read(key: _deviceIdKey);
+      final savedAnonToken = await _secureStorage.read(key: _anonTokenKey);
+
+      if (savedAnonToken != null && savedAnonToken.isNotEmpty) {
+        _anonymousToken = savedAnonToken;
+      }
 
       if (token != null && token.isNotEmpty) {
         _accessToken = token;
@@ -241,7 +314,7 @@ class VkAuthService {
         return true;
       }
     } catch (e) {
-      debugPrint('Failed to restore auth session: $e');
+      LogService.w('Failed to restore auth session: $e', tag: 'AUTH');
     }
     return false;
   }
@@ -258,19 +331,21 @@ class VkAuthService {
         await _secureStorage.write(key: _deviceIdKey, value: _deviceId!);
       }
     } catch (e) {
-      debugPrint('Failed to save auth session: $e');
+      LogService.w('Failed to save auth session: $e', tag: 'AUTH');
     }
   }
 
   Future<void> clearSession() async {
     _accessToken = null;
     _userId = null;
+    _anonymousToken = null;
     try {
       await _secureStorage.delete(key: _tokenKey);
       await _secureStorage.delete(key: _userIdKey);
       await _secureStorage.delete(key: _deviceIdKey);
+      await _secureStorage.delete(key: _anonTokenKey);
     } catch (e) {
-      debugPrint('Failed to clear auth session: $e');
+      LogService.w('Failed to clear auth session: $e', tag: 'AUTH');
     }
   }
 

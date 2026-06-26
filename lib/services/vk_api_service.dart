@@ -8,6 +8,7 @@ import '../models/track.dart';
 import '../models/playlist.dart';
 import '../models/mix.dart';
 import '../models/mix_settings.dart';
+import 'log_service.dart';
 import 'vk_config.dart';
 
 /// VK API Service
@@ -50,6 +51,11 @@ class VkApiService {
     _saveSession();
   }
 
+  /// Устанавливает device_id (синхронизирует с VkAuthService)
+  void setDeviceId(String deviceId) {
+    _deviceId = deviceId;
+  }
+
   void clearToken() {
     _accessToken = null;
     _userId = null;
@@ -67,8 +73,9 @@ class VkApiService {
         _accessToken = token;
         _userId = userIdStr != null ? int.tryParse(userIdStr) : null;
         _deviceId = savedDeviceId ?? VkConfig.generateDeviceId();
-        debugPrint(
-            'Session restored: token=${token.substring(0, 10)}..., userId=$_userId, deviceId=$_deviceId');
+        LogService.i(
+            'Session restored: token=${token.substring(0, 10)}..., userId=$_userId, deviceId=$_deviceId',
+            tag: 'API');
         return true;
       }
     } catch (e) {
@@ -105,11 +112,13 @@ class VkApiService {
 
   /// Единая точка вызова VK API.
   /// POST-запрос с form-encoded body, как в Music-M.
-  Future<dynamic> _call(String method, {Map<String, String>? params}) async {
-    if (_accessToken == null) {
-      throw Exception('Not authorized');
-    }
-
+  ///
+  /// [skipAuthorization] — если true, не добавляет access_token (для auth.* методов).
+  /// [anonymousToken] — анонимный токен для методов, которые его требуют.
+  Future<dynamic> _call(String method,
+      {Map<String, String>? params,
+      bool skipAuthorization = false,
+      String? anonymousToken}) async {
     // Генерируем device_id если ещё нет
     _deviceId ??= VkConfig.generateDeviceId();
 
@@ -118,14 +127,16 @@ class VkApiService {
       'v': VkConfig.apiVersion,
       'lang': 'ru',
       'device_id': _deviceId!,
-      'access_token': _accessToken!,
+      if (!skipAuthorization) 'access_token': _accessToken!,
+      if (anonymousToken != null && anonymousToken.isNotEmpty)
+        'anonymous_token': anonymousToken,
       if (params != null) ...params,
     };
 
     final url = '${VkConfig.apiBaseUrl}/$method';
     final body = Uri(queryParameters: bodyParams).query;
 
-    debugPrint('VK API POST: $method (${bodyParams.length} params)');
+    LogService.d('VK API POST: $method (${bodyParams.length} params)', tag: 'API');
 
     try {
       final request = await _httpClient!.postUrl(Uri.parse(url));
@@ -143,6 +154,7 @@ class VkApiService {
 
       if (response.statusCode != 200) {
         final errorBody = await response.transform(utf8.decoder).join();
+        LogService.e('VK API HTTP ERROR $method: status=${response.statusCode}, body=$errorBody', tag: 'API');
         throw Exception('HTTP ${response.statusCode}: $errorBody');
       }
 
@@ -155,11 +167,28 @@ class VkApiService {
         final errorCode = error['error_code'];
         final errorMsg = error['error_msg'] ?? error['error_text'] ?? 'Unknown';
         final errorStr = 'VK API Error [$errorCode]: $errorMsg';
-        debugPrint(errorStr);
+        LogService.e('VK API ERROR $method: $errorStr', tag: 'API');
+        LogService.d('VK API ERROR response body: $responseBody', tag: 'API');
         throw Exception(errorStr);
       }
 
-      return data['response'] ?? data;
+      final responseData = data['response'] ?? data;
+      LogService.d('VK API OK $method: response type=${responseData.runtimeType}', tag: 'API');
+      if (responseData is Map<String, dynamic>) {
+        LogService.d('VK API OK $method: keys=${responseData.keys.take(10).join(", ")}', tag: 'API');
+        if (responseData.containsKey('items')) {
+          final items = responseData['items'];
+          LogService.d('VK API OK $method: items count=${items is List ? items.length : "not a list"}', tag: 'API');
+        }
+        if (responseData.containsKey('count')) {
+          LogService.d('VK API OK $method: count=${responseData['count']}', tag: 'API');
+        }
+      }
+      if (responseData is List) {
+        LogService.d('VK API OK $method: list length=${responseData.length}', tag: 'API');
+      }
+
+      return responseData;
     } catch (e) {
       if (e is Exception) rethrow;
       throw Exception('Network error: $e');
@@ -195,7 +224,7 @@ class VkApiService {
 
     final data = await _call('audio.get', params: params);
     final items = _extractItems(data);
-    debugPrint('Parsed ${items.length} tracks from audio.get');
+    LogService.d('Parsed ${items.length} tracks from audio.get', tag: 'API');
     return items.map((e) => Track.fromJson(e)).toList();
   }
 
@@ -235,7 +264,7 @@ class VkApiService {
 
     final data = await _call('audio.getPlaylists', params: params);
     final items = _extractItems(data);
-    debugPrint('Parsed ${items.length} playlists from audio.getPlaylists');
+    LogService.d('Parsed ${items.length} playlists from audio.getPlaylists', tag: 'API');
     return items.map((e) => Playlist.fromJson(e)).toList();
   }
 
@@ -281,7 +310,7 @@ class VkApiService {
 
     final data = await _call('audio.getRecommendations', params: params);
     final items = _extractItems(data);
-    debugPrint('Parsed ${items.length} recommendations');
+    LogService.d('Parsed ${items.length} recommendations', tag: 'API');
     return items.map((e) => Track.fromJson(e)).toList();
   }
 
@@ -303,7 +332,7 @@ class VkApiService {
       final items = _extractItems(data);
       return items.map((e) => Track.fromJson(e)).toList();
     } catch (e) {
-      debugPrint('getStreamMixAudios failed: $e');
+      LogService.w('getStreamMixAudios failed: $e', tag: 'API');
       return [];
     }
   }
@@ -320,7 +349,7 @@ class VkApiService {
       }
       return null;
     } catch (e) {
-      debugPrint('getStreamMixSettings failed: $e');
+      LogService.w('getStreamMixSettings failed: $e', tag: 'API');
       return null;
     }
   }
@@ -344,7 +373,7 @@ class VkApiService {
 
       return null;
     } catch (e) {
-      debugPrint('getMix failed: $e');
+      LogService.w('getMix failed: $e', tag: 'API');
       return null;
     }
   }
@@ -365,7 +394,7 @@ class VkApiService {
       final items = _extractItems(data);
       return items.map((e) => Track.fromJson(e)).toList();
     } catch (e) {
-      debugPrint('getAudioById failed: $e');
+      LogService.w('getAudioById failed: $e', tag: 'API');
       return [];
     }
   }
@@ -375,7 +404,7 @@ class VkApiService {
   // ==========================================
 
   Future<Map<String, dynamic>> getCatalog() async {
-    debugPrint('getCatalog: not used, returning empty');
+    LogService.d('getCatalog: not used, returning empty', tag: 'API');
     return {'response': null};
   }
 

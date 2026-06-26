@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_provider.dart';
+import 'log_viewer_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -298,6 +299,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           context: context,
                           applicationName: 'VK Z',
                           applicationVersion: '1.0.0',
+                        );
+                      },
+                    ),
+                    _SettingsDivider(),
+                    _SettingsActionTile(
+                      icon: Icons.bug_report_outlined,
+                      title: 'Логи',
+                      subtitle: 'Просмотр отладочных логов',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const LogViewerScreen(),
+                          ),
                         );
                       },
                     ),

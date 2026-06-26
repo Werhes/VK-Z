@@ -155,6 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void _onAuthSuccess(AuthTokenResult result) {
     final provider = context.read<MusicProvider>();
     provider.setToken(result.accessToken, userId: result.userId);
+    // Синхронизируем device_id с VkApiService
+    provider.apiService.setDeviceId(_vkAuth.deviceId);
     provider.loadUserMusic();
     Navigator.of(context).pushReplacementNamed('/home');
   }
@@ -233,10 +235,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final userId = VkConfig.extractUserId(input);
 
     if (token != null) {
-      context.read<MusicProvider>().setToken(token, userId: userId);
+      final provider = context.read<MusicProvider>();
+      provider.setToken(token, userId: userId);
+      // Синхронизируем device_id
+      provider.apiService.setDeviceId(_vkAuth.deviceId);
       Navigator.of(context).pushReplacementNamed('/home');
     } else if (input.length > 20 && !input.contains(' ')) {
-      context.read<MusicProvider>().setToken(input, userId: null);
+      final provider = context.read<MusicProvider>();
+      provider.setToken(input, userId: null);
+      provider.apiService.setDeviceId(_vkAuth.deviceId);
       Navigator.of(context).pushReplacementNamed('/home');
     } else {
       setState(() => _errorMessage = 'Не удалось извлечь токен.');

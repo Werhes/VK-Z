@@ -70,6 +70,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (restored) {
       // Сессия восстановлена — сразу загружаем музыку и идём на home
+      // Генерируем device_id если его нет
+      if (provider.apiService.deviceId == null) {
+        // device_id будет сгенерирован при первом API вызове
+      }
       provider.loadUserMusic();
       Navigator.of(context).pushReplacementNamed('/home');
     } else {
