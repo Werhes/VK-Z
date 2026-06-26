@@ -38,7 +38,7 @@
 ### 1. Клонирование
 
 ```bash
-git clone https://github.com/yourusername/vk_z.git
+git clone https://github.com/Werhes/VK-Z.git
 cd vk_z
 ```
 
