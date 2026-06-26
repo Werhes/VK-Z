@@ -4,22 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version name (e.g. v1.0.1)'
+        description: 'Версия релиза (например, v1.0.0)'
         required: true
-        default: 'v1.0.6'
+        default: 'v1.0.0'
         type: string
       release_title:
-        description: 'Release title'
+        description: 'ноунейм-релиз'
         required: true
-        default: 'Token fix'
+        default: 'Фикс фикса 🤣🤣🤣🤣🤣🤣🤣🤣'
         type: string
       release_notes:
-        description: 'Release notes'
+        description: 'описание релиза'
         required: true
-        default: '- Bug fixes'
+        default: 'Читай название xD'
         type: string
       release_type:
-        description: 'Release type'
+        description: 'Чо эт за чудо такое bruuuh'
         required: true
         default: 'prerelease'
         type: choice
@@ -27,7 +27,7 @@ on:
           - prerelease
           - release
       send_telegram:
-        description: 'Send Telegram notification?'
+        description: 'Отправить уведомление в тгк 📢?'
         required: true
         default: true
         type: boolean
@@ -44,26 +44,10 @@ jobs:
   # 1. BUILD ANDROID
   # ============================================
   build-android:
-    name: Build Android
+    name: 🎃 АнДрОеДы сюдыыыы)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: setup-rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
-
-      - name: setup-ndk
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r27
-
-      - name: build-rust
-        run: |
-          cd rust
-          cargo install cargo-ndk
-          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../android/app/src/main/jniLibs build --release
 
       - name: setup-flutter
         uses: subosito/flutter-action@v2
@@ -111,22 +95,10 @@ jobs:
   # 2. BUILD IOS
   # ============================================
   build-ios:
-    name: Build iOS
+    name: 🎉 ЯбЛыК 
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: setup-rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios
-
-      - name: build-rust
-        run: |
-          cd rust
-          cargo build --release --target aarch64-apple-ios
-          mkdir -p ../ios/Runner
-          cp target/aarch64-apple-ios/release/librust_vk_z.a ../ios/Runner/
 
       - name: setup-flutter
         uses: subosito/flutter-action@v2
@@ -174,7 +146,7 @@ jobs:
   # 3. BUILD WINDOWS
   # ============================================
   build-windows:
-    name: Build Windows
+    name: 🎨 Сборка под Windows
     runs-on: windows-latest
     continue-on-error: true
     steps:
@@ -264,7 +236,7 @@ jobs:
   # 4. BUILD MACOS
   # ============================================
   build-macos:
-    name: Build macOS
+    name: 🍎 Сборка под macOS
     runs-on: macos-latest
     continue-on-error: true
     steps:
@@ -383,7 +355,7 @@ jobs:
   # 5. BUILD LINUX
   # ============================================
   build-linux:
-    name: Build Linux
+    name: 🐧 А это мили пингвинчик :)
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -444,7 +416,7 @@ jobs:
   # 6. CREATE RELEASE
   # ============================================
   release:
-    name: Create Release
+    name: Создать релиз и загрузить файлы 😄
     needs: [build-android, build-ios, build-windows, build-macos, build-linux]
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
@@ -519,7 +491,7 @@ jobs:
   # 7. TELEGRAM NOTIFICATION
   # ============================================
   notify-telegram:
-    name: Telegram Notification
+    name: Отправить уведомление в тгк 📢
     needs: [release]
     if: ${{ always() && needs.release.result == 'success' && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) }}
     runs-on: ubuntu-latest

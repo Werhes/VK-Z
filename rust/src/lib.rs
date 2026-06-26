@@ -278,7 +278,7 @@ fn parse_tracks(data: serde_json::Value) -> Vec<VkTrack> {
             title: item["title"].as_str().unwrap_or("Unknown").to_string(),
             duration: item["duration"].as_i64().unwrap_or(0),
             url: item["url"].as_str().unwrap_or("").to_string(),
-            thumb_url: if thumb_small.is_empty() { thumb_big.clone() } else { thumb_small },
+            thumb_url: if thumb_small.is_empty() { thumb_big.clone() } else { thumb_small.clone() },
             thumb_url_big: if thumb_big.is_empty() { thumb_small } else { thumb_big },
             access_key: item["access_key"].as_str().unwrap_or("").to_string(),
         }

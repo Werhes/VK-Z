@@ -7,14 +7,18 @@ import '../models/playlist.dart';
 import '../models/mix.dart';
 import '../models/mix_settings.dart';
 import 'vk_config.dart';
-import 'rust_vk_api.dart';
+import 'native_vk_api.dart';
 
 /// VK API Service
 ///
-/// Использует Rust VK API клиент через FFI (если библиотека загружена),
-/// иначе fallback на чистый Dart HttpClient.
+/// Двухуровневая архитектура:
+/// 1. **Нативный клиент** (NativeVkApi):
+///    - Android: Kotlin VkApiPlugin (MethodChannel, HttpURLConnection)
+///    - iOS: Swift VkApiPlugin (MethodChannel, URLSession)
+///    - macOS/Linux/Windows: Rust FFI (librust_vk_z, reqwest)
+/// 2. **Dart HttpClient fallback** — если нативный клиент не загружен
 ///
-/// Rust-клиент — прямой порт рабочего Python-скрипта vk_client.py:
+/// Все реализации используют:
 /// - API v5.131
 /// - Kate Mobile User-Agent
 /// - GET-запросы к api.vk.ru/method/
@@ -23,17 +27,17 @@ class VkApiService {
   String? _accessToken;
   int? _userId;
   HttpClient? _dartClient;
-  final RustVkApi _rustApi = RustVkApi.instance;
-  bool _useRust = false;
+  final NativeVkApi _nativeApi = NativeVkApi.instance;
+  bool _useNative = false;
 
   static const String _tokenKey = 'vk_access_token';
   static const String _userIdKey = 'vk_user_id';
 
   VkApiService() {
-    // Пытаемся загрузить Rust-библиотеку
-    _useRust = _rustApi.tryLoad();
-    if (_useRust) {
-      debugPrint('🚀 Using Rust VK API client');
+    // Пытаемся загрузить нативный клиент
+    _useNative = _nativeApi.tryLoad();
+    if (_useNative) {
+      debugPrint('🚀 Using native VK API client');
     } else {
       debugPrint('📡 Using Dart HttpClient fallback');
       _dartClient = HttpClient()
@@ -51,9 +55,9 @@ class VkApiService {
     _accessToken = token;
     _userId = userId;
     _saveSession();
-    // Передаём токен в Rust, если он загружен
-    if (_useRust) {
-      _rustApi.setToken(token, userId);
+    // Передаём токен в нативный клиент
+    if (_useNative) {
+      _nativeApi.setToken(token, userId);
     }
   }
 
@@ -72,8 +76,8 @@ class VkApiService {
       if (token != null && token.isNotEmpty) {
         _accessToken = token;
         _userId = userId;
-        if (_useRust) {
-          _rustApi.setToken(token, userId);
+        if (_useNative) {
+          _nativeApi.setToken(token, userId);
         }
         debugPrint(
             'Session restored: token=${token.substring(0, 10)}..., userId=$userId');
@@ -110,21 +114,21 @@ class VkApiService {
   }
 
   /// Единая точка вызова VK API.
-  /// Сначала пробует Rust, если не получилось — Dart HttpClient.
+  /// Сначала пробует нативный клиент, если не получилось — Dart HttpClient.
   Future<dynamic> _call(String method, {Map<String, String>? params}) async {
     if (_accessToken == null) {
       throw Exception('Not authorized');
     }
 
-    // Пробуем Rust
-    if (_useRust) {
+    // Пробуем нативный клиент
+    if (_useNative) {
       try {
-        final result = await _rustApi.callRust(method, params ?? {});
+        final result = await _nativeApi.call(method, params ?? {});
         if (result != null) {
           return result;
         }
       } catch (e) {
-        debugPrint('Rust call failed, falling back to Dart: $e');
+        debugPrint('Native call failed, falling back to Dart: $e');
       }
     }
 
