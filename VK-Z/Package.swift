@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "VK-Z",
+    name: "VKZ",
     platforms: [
         .iOS(.v17)
     ],
     products: [
         .library(
-            name: "VK-Z",
-            targets: ["VK-Z"]
+            name: "VKZ",
+            targets: ["VKZ"]
         )
     ],
     dependencies: [
@@ -19,7 +19,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "VK-Z",
+            name: "VKZ",
             dependencies: [
                 "Alamofire",
                 "Kingfisher",

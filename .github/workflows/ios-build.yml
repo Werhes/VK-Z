@@ -62,7 +62,7 @@ jobs:
           cd VK-Z
           set -o pipefail
           xcodebuild build \
-            -scheme "VK-Z" \
+            -scheme "VKZ" \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5' \
             -configuration Debug \
@@ -92,13 +92,18 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+          gradle-home-cache-cleanup: false
+
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
-          export JAVA_OPTS="-Xmx2048m -XX:+UseParallelGC"
-          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2048m -Dorg.gradle.daemon=false"
-          ./gradlew assembleDebug --no-daemon --no-configuration-cache -Dorg.gradle.daemon=false
+          export TERM=dumb
+          ./gradlew assembleDebug --no-daemon --no-configuration-cache --no-build-cache 2>&1
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
