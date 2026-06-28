@@ -10,7 +10,6 @@ namespace VKZ
 {
     public partial class MainWindow : Window
     {
-        private bool _isDraggingSlider;
 
         public MainWindow()
         {
@@ -66,8 +65,7 @@ namespace VKZ
         {
             Dispatcher.Invoke(() =>
             {
-                if (!_isDraggingSlider)
-                    ProgressSlider.Value = position;
+                ProgressSlider.Value = position;
                 CurrentTimeText.Text = TimeSpan.FromSeconds(position).ToString(@"m\:ss");
             });
         }
@@ -135,8 +133,7 @@ namespace VKZ
 
         private void ProgressSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_isDraggingSlider)
-                AudioPlayerService.Instance.Seek(e.NewValue);
+            AudioPlayerService.Instance.Seek(e.NewValue);
         }
 
         private void VolumeButton_Click(object sender, RoutedEventArgs e)

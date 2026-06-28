@@ -54,9 +54,13 @@ jobs:
           cd VK-Z
           swift package resolve
 
+      - name: Install xcpretty
+        run: gem install xcpretty --no-document || echo "xcpretty not available, continuing without it"
+
       - name: Build iOS project
         run: |
           cd VK-Z
+          set -o pipefail
           xcodebuild build \
             -scheme "VK-Z" \
             -sdk iphonesimulator \
@@ -69,7 +73,9 @@ jobs:
         if: failure()
         with:
           name: ios-build-logs
-          path: ~/Library/Logs/DiagnosticReports/
+          path: |
+            ~/Library/Logs/DiagnosticReports/
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/
           retention-days: 7
 
   android-build:
@@ -86,14 +92,13 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          export JAVA_OPTS="-Xmx2048m -XX:+UseParallelGC"
+          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2048m -Dorg.gradle.daemon=false"
+          ./gradlew assembleDebug --no-daemon --no-configuration-cache -Dorg.gradle.daemon=false
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4

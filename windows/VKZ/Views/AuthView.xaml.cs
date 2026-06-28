@@ -137,7 +137,7 @@ namespace VKZ.Views
                     });
 
                     // Wait for the user to enter the code and click the button
-                    var code = await _twoFactorTcs.Task;
+                    var code = await _twoFactorTcs!.Task;
                     return code ?? throw new OperationCanceledException("2FA code was not provided");
                 });
 

@@ -112,14 +112,15 @@ namespace VKZ.Converters
             {
                 try
                 {
-                    return new ImageSourceConverter().ConvertFrom(url);
+                    var result = new ImageSourceConverter().ConvertFrom(url);
+                    return result ?? Binding.DoNothing;
                 }
                 catch
                 {
-                    return null!;
+                    return Binding.DoNothing;
                 }
             }
-            return null!;
+            return Binding.DoNothing;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
