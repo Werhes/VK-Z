@@ -9,7 +9,7 @@ struct MixView: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 24) {
                     headerView
                     
                     if viewModel.isLoading && viewModel.mixes.isEmpty {
@@ -20,9 +20,9 @@ struct MixView: View {
                         mixesGrid
                     }
                 }
-                .padding(.bottom, 100)
+                .padding(.bottom, 120)
             }
-            .background(Color.vkBackground)
+            .background(AppColors.background)
             .refreshable { viewModel.loadMixes() }
             .navigationDestination(isPresented: $showMixDetail) {
                 if let mix = selectedMix {
@@ -34,23 +34,29 @@ struct MixView: View {
     }
     
     private var headerView: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 12) {
-                Image(systemName: "waveform.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(
-                        LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primaryGradient)
+                        .frame(width: 44, height: 44)
+                        .shadow(color: AppColors.accentPurple.opacity(0.4), radius: 10, y: 4)
+                    
+                    Image(systemName: "waveform.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.white)
+                }
                 
-                Text("VK Микс")
-                    .font(.custom("VKSansDisplay-Bold", size: 34))
-                    .foregroundColor(.white)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("VK Микс")
+                        .font(.custom("VKSansDisplay-Bold", size: 34))
+                        .foregroundColor(.white)
+                    
+                    Text("Персональные подборки на основе ваших треков")
+                        .font(.custom("VKSansDisplay-Regular", size: 14))
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
-            
-            Text("Персональные подборки на основе ваших треков")
-                .font(.custom("VKSansDisplay-Regular", size: 14))
-                .foregroundColor(.gray)
-                .padding(.top, 2)
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -61,18 +67,18 @@ struct MixView: View {
             ForEach(0..<4) { _ in
                 HStack(spacing: 16) {
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.vkSurface)
+                        .fill(AppColors.surfaceLight)
                         .frame(width: 120, height: 120)
                     
                     VStack(alignment: .leading, spacing: 8) {
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.vkSurface)
+                            .fill(AppColors.surfaceLight)
                             .frame(width: 140, height: 16)
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.vkSurface)
+                            .fill(AppColors.surfaceLight)
                             .frame(width: 100, height: 12)
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.vkSurface)
+                            .fill(AppColors.surfaceLight)
                             .frame(width: 180, height: 12)
                     }
                     
@@ -85,41 +91,46 @@ struct MixView: View {
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             Spacer().frame(height: 40)
             
             ZStack {
                 Circle()
                     .fill(
-                        LinearGradient(colors: [.purple.opacity(0.3), .blue.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        LinearGradient(
+                            colors: [AppColors.accentPurple.opacity(0.2), AppColors.accentBlue.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                    .frame(width: 120, height: 120)
+                    .frame(width: 140, height: 140)
                 
                 Image(systemName: "waveform.circle.fill")
-                    .font(.system(size: 60))
-                    .foregroundStyle(
-                        LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                    .font(.system(size: 64))
+                    .foregroundStyle(AppColors.primaryGradient)
             }
             
-            Text("Миксы скоро появятся")
-                .font(.custom("VKSansDisplay-Bold", size: 20))
-                .foregroundColor(.white)
-            
-            Text("Слушайте музыку, чтобы мы могли\nсоздавать для вас персональные подборки")
-                .font(.custom("VKSansDisplay-Regular", size: 14))
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
+            VStack(spacing: 8) {
+                Text("Миксы скоро появятся")
+                    .font(.custom("VKSansDisplay-Bold", size: 22))
+                    .foregroundColor(.white)
+                
+                Text("Слушайте музыку, чтобы мы могли\nсоздавать для вас персональные подборки")
+                    .font(.custom("VKSansDisplay-Regular", size: 14))
+                    .foregroundColor(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
             
             Button(action: { viewModel.loadMixes() }) {
                 Text("Обновить")
                     .font(.custom("VKSansDisplay-Medium", size: 16))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 36)
                     .padding(.vertical, 14)
-                    .background(Color.blue)
-                    .cornerRadius(12)
+                    .background(AppColors.primaryGradient)
+                    .cornerRadius(14)
+                    .shadow(color: AppColors.accentBlue.opacity(0.3), radius: 10, y: 4)
             }
             .padding(.top, 8)
         }
@@ -143,6 +154,7 @@ struct MixView: View {
 // MARK: - Mix Card
 struct MixCardView: View {
     let mix: VKMix
+    @State private var isPressed = false
     
     var body: some View {
         HStack(spacing: 16) {
@@ -156,34 +168,30 @@ struct MixCardView: View {
                             .aspectRatio(contentMode: .fill)
                     case .failure:
                         ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.purple, .blue],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(AppColors.primaryGradient)
                             Image(systemName: "waveform")
                                 .font(.title)
                                 .foregroundColor(.white.opacity(0.7))
                         }
                     case .empty:
                         ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.vkSurface)
-                            ProgressView().tint(.gray)
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(AppColors.surfaceLight)
+                            ProgressView()
+                                .tint(AppColors.textSecondary)
                         }
                     @unknown default:
                         EmptyView()
                     }
                 }
             }
-            .frame(width: 100, height: 100)
-            .cornerRadius(16)
+            .frame(width: 110, height: 110)
+            .cornerRadius(18)
+            .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
             
             // Info
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(mix.title)
                     .font(.custom("VKSansDisplay-Bold", size: 17))
                     .foregroundColor(.white)
@@ -192,21 +200,25 @@ struct MixCardView: View {
                 if let subtitle = mix.subtitle {
                     Text(subtitle)
                         .font(.custom("VKSansDisplay-Regular", size: 13))
-                        .foregroundColor(.gray)
+                        .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
                 }
                 
                 if let artists = mix.artists, !artists.isEmpty {
                     Text(artists.joined(separator: ", "))
                         .font(.custom("VKSansDisplay-Regular", size: 12))
-                        .foregroundColor(.gray.opacity(0.7))
+                        .foregroundColor(AppColors.textTertiary)
                         .lineLimit(1)
                 }
                 
                 if let count = mix.trackCount {
-                    Text("\(count) треков")
-                        .font(.custom("VKSansDisplay-Regular", size: 12))
-                        .foregroundColor(.gray.opacity(0.6))
+                    HStack(spacing: 4) {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 10))
+                        Text("\(count) треков")
+                            .font(.custom("VKSansDisplay-Regular", size: 12))
+                    }
+                    .foregroundColor(AppColors.textTertiary)
                 }
             }
             
@@ -214,11 +226,17 @@ struct MixCardView: View {
             
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(AppColors.textTertiary)
         }
-        .padding(12)
-        .background(Color.vkCardBackground)
-        .cornerRadius(20)
+        .padding(14)
+        .background(AppColors.cardBackground)
+        .cornerRadius(22)
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        .scaleEffect(isPressed ? 0.97 : 1.0)
+        .animation(AppAnimation.spring, value: isPressed)
+        .onLongPressGesture(minimumDuration: 0.1, pressing: { pressing in
+            isPressed = pressing
+        }, perform: { })
     }
 }
 
@@ -232,9 +250,9 @@ struct MixDetailView: View {
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Header
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     ZStack {
                         AsyncImage(url: mix.displayCover) { phase in
                             switch phase {
@@ -244,72 +262,60 @@ struct MixDetailView: View {
                                     .aspectRatio(contentMode: .fill)
                             case .failure:
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [.purple, .blue],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
+                                    RoundedRectangle(cornerRadius: 24)
+                                        .fill(AppColors.primaryGradient)
                                     Image(systemName: "waveform")
                                         .font(.system(size: 50))
                                         .foregroundColor(.white.opacity(0.7))
                                 }
                             case .empty:
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(Color.vkSurface)
-                                    ProgressView().tint(.gray)
+                                    RoundedRectangle(cornerRadius: 24)
+                                        .fill(AppColors.surfaceLight)
+                                    ProgressView()
+                                        .tint(AppColors.textSecondary)
                                 }
                             @unknown default:
                                 EmptyView()
                             }
                         }
                     }
-                    .frame(width: 200, height: 200)
-                    .cornerRadius(20)
-                    .shadow(color: .purple.opacity(0.3), radius: 20, y: 10)
+                    .frame(width: 220, height: 220)
+                    .cornerRadius(24)
+                    .shadow(color: AppColors.accentPurple.opacity(0.3), radius: 25, y: 12)
                     
-                    Text(mix.title)
-                        .font(.custom("VKSansDisplay-Bold", size: 24))
-                        .foregroundColor(.white)
-                    
-                    if let subtitle = mix.subtitle {
-                        Text(subtitle)
-                            .font(.custom("VKSansDisplay-Regular", size: 14))
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                    }
-                    
-                    if let desc = mix.description {
-                        Text(desc)
-                            .font(.custom("VKSansDisplay-Regular", size: 13))
-                            .foregroundColor(.gray.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
+                    VStack(spacing: 6) {
+                        Text(mix.title)
+                            .font(.custom("VKSansDisplay-Bold", size: 26))
+                            .foregroundColor(.white)
+                        
+                        if let subtitle = mix.subtitle {
+                            Text(subtitle)
+                                .font(.custom("VKSansDisplay-Regular", size: 14))
+                                .foregroundColor(AppColors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        
+                        if let desc = mix.description {
+                            Text(desc)
+                                .font(.custom("VKSansDisplay-Regular", size: 13))
+                                .foregroundColor(AppColors.textTertiary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                        }
                     }
                     
                     // Play button
                     Button(action: {
                         viewModel.playMix(mix, tracks: tracks)
                     }) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             Image(systemName: "play.fill")
+                                .font(.system(size: 16))
                             Text("Слушать микс")
                                 .font(.custom("VKSansDisplay-Medium", size: 16))
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(
-                            LinearGradient(
-                                colors: [.purple, .blue],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(14)
+                        .accentButtonStyle()
                     }
                     .padding(.horizontal, 40)
                 }
@@ -320,10 +326,16 @@ struct MixDetailView: View {
                     VStack(spacing: 12) {
                         ForEach(0..<5) { _ in
                             HStack(spacing: 12) {
-                                RoundedRectangle(cornerRadius: 8).fill(Color.vkSurface).frame(width: 44, height: 44)
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(AppColors.surfaceLight)
+                                    .frame(width: 44, height: 44)
                                 VStack(alignment: .leading, spacing: 6) {
-                                    RoundedRectangle(cornerRadius: 4).fill(Color.vkSurface).frame(width: 160, height: 12)
-                                    RoundedRectangle(cornerRadius: 4).fill(Color.vkSurface).frame(width: 100, height: 10)
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(AppColors.surfaceLight)
+                                        .frame(width: 160, height: 12)
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(AppColors.surfaceLight)
+                                        .frame(width: 100, height: 10)
                                 }
                                 Spacer()
                             }
@@ -336,22 +348,29 @@ struct MixDetailView: View {
                             TrackRowView(track: track, index: index + 1)
                                 .onTapGesture { viewModel.playTrack(track) }
                             if index < tracks.count - 1 {
-                                Divider().background(Color.white.opacity(0.05)).padding(.leading, 60)
+                                Divider()
+                                    .background(AppColors.surfaceLight)
+                                    .padding(.leading, 60)
                             }
                         }
                     }
-                    .background(Color.vkCardBackground)
+                    .background(AppColors.cardBackground)
                     .cornerRadius(16)
                     .padding(.horizontal, 16)
                 }
             }
         }
-        .background(Color.vkBackground)
+        .background(AppColors.background)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left").foregroundColor(.white)
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Назад")
+                    }
+                    .foregroundColor(AppColors.accentBlue)
                 }
             }
         }
@@ -412,5 +431,6 @@ final class MixViewModel: ObservableObject {
 }
 
 #Preview {
-    MixView().preferredColorScheme(.dark)
+    MixView()
+        .preferredColorScheme(.dark)
 }
