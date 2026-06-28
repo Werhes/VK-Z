@@ -1,12 +1,36 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Users\\Werhes\\Documents\\GitHub\\VK-Z\\windows\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Werhes\\AppData\\Local\\Temp\\.vsdbgsrc\\7fe662acbb5ac971e843f1dc7fd07fd1389fc287bfa3daf0d8a746f01400594f\\RuntimeType.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "RuntimeType.cs",
+              "DocumentMoniker": "C:\\Users\\Werhes\\AppData\\Local\\Temp\\.vsdbgsrc\\7fe662acbb5ac971e843f1dc7fd07fd1389fc287bfa3daf0d8a746f01400594f\\RuntimeType.cs",
+              "RelativeDocumentMoniker": "..\\..\\..\\..\\AppData\\Local\\Temp\\.vsdbgsrc\\7fe662acbb5ac971e843f1dc7fd07fd1389fc287bfa3daf0d8a746f01400594f\\RuntimeType.cs",
+              "ToolTip": "C:\\Users\\Werhes\\AppData\\Local\\Temp\\.vsdbgsrc\\7fe662acbb5ac971e843f1dc7fd07fd1389fc287bfa3daf0d8a746f01400594f\\RuntimeType.cs [\u0422\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u0435\u043D\u0438\u0435]",
+              "RelativeToolTip": "..\\..\\..\\..\\AppData\\Local\\Temp\\.vsdbgsrc\\7fe662acbb5ac971e843f1dc7fd07fd1389fc287bfa3daf0d8a746f01400594f\\RuntimeType.cs [\u0422\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u0435\u043D\u0438\u0435]",
+              "ViewState": "AgIAALoMAAAAAAAAAADwv8kMAAAEAAAAAQAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-28T15:56:51.629Z",
+              "EditorCaption": " [\u0422\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u0435\u043D\u0438\u0435]"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

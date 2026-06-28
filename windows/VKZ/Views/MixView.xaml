@@ -45,7 +45,7 @@
                                 <StackPanel Grid.Row="1" Margin="12,10">
                                     <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis" />
                                     <TextBlock Text="{Binding Description}" FontSize="11" Foreground="#8A8E99" TextTrimming="CharacterEllipsis" MaxHeight="32" />
-                                    <TextBlock Text="{Binding TrackCount, StringFormat='{0} треков'}" FontSize="11" Foreground="#5C5F66" Margin="0,4,0,0" />
+                                    <TextBlock Text="{Binding TrackCount, StringFormat='{}{0} треков'}" FontSize="11" Foreground="#5C5F66" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Grid>
                         </Border>

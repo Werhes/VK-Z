@@ -1,4 +1,5 @@
 using System.Windows;
+using VKZ.Properties;
 using VKZ.Services;
 
 namespace VKZ
@@ -10,12 +11,12 @@ namespace VKZ
             base.OnStartup(e);
 
             // Load saved token
-            var savedToken = Properties.Settings.Default.AccessToken;
-            var savedUserId = Properties.Settings.Default.UserId;
+            var savedToken = Settings.Default.AccessToken;
+            var savedUserId = Settings.Default.UserId;
 
             if (!string.IsNullOrEmpty(savedToken) && savedUserId > 0)
             {
-                VKApiService.Instance.Configure(savedToken, savedUserId);
+                // Token will be used on demand when user navigates to playlists
             }
         }
 

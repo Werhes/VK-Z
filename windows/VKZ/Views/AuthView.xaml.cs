@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using VKZ.Properties;
@@ -9,7 +10,7 @@ namespace VKZ.Views
     public partial class AuthView : UserControl
     {
         public event Action? OnAuthSuccess;
-        private bool _waitingForTwoFactor;
+        private TaskCompletionSource<string?>? _twoFactorTcs;
 
         public AuthView()
         {
@@ -36,9 +37,20 @@ namespace VKZ.Views
 
         private async void OnAuthClick(object sender, RoutedEventArgs e)
         {
-            if (_waitingForTwoFactor)
+            // If we're waiting for 2FA code, submit it via the TCS
+            if (_twoFactorTcs != null)
             {
-                await SubmitTwoFactor();
+                var code = TwoFactorTextBox.Text?.Trim();
+                if (string.IsNullOrEmpty(code))
+                {
+                    StatusText.Text = "Введите код двухфакторной авторизации";
+                    StatusText.Foreground = System.Windows.Media.Brushes.Orange;
+                    return;
+                }
+
+                _twoFactorTcs.TrySetResult(code);
+                AuthActionButton.IsEnabled = false;
+                AuthActionButton.Content = "Авторизация...";
                 return;
             }
 
@@ -52,7 +64,7 @@ namespace VKZ.Views
             }
         }
 
-        private async System.Threading.Tasks.Task AuthWithToken()
+        private async Task AuthWithToken()
         {
             var token = TokenTextBox.Text?.Trim();
             if (string.IsNullOrEmpty(token))
@@ -92,7 +104,7 @@ namespace VKZ.Views
             }
         }
 
-        private async System.Threading.Tasks.Task AuthWithPhone()
+        private async Task AuthWithPhone()
         {
             var phone = PhoneTextBox.Text?.Trim();
             var password = PasswordBox.Password;
@@ -109,36 +121,24 @@ namespace VKZ.Views
                 StatusText.Text = "Авторизация...";
                 AuthActionButton.IsEnabled = false;
 
-                await VKApiService.Instance.AuthorizeWithLoginAsync(phone, password, () =>
+                await VKApiService.Instance.AuthorizeWithLoginAsync(phone, password, async () =>
                 {
-                    // This runs on UI thread via dispatcher
-                    string? code = null;
-                    Dispatcher.Invoke(() =>
+                    // Switch to UI thread to show 2FA panel
+                    await Dispatcher.InvokeAsync(() =>
                     {
-                        _waitingForTwoFactor = true;
+                        _twoFactorTcs = new TaskCompletionSource<string?>();
                         TwoFactorPanel.Visibility = Visibility.Visible;
                         AuthActionButton.Content = "Отправить код 2FA";
+                        AuthActionButton.IsEnabled = true;
                         StatusText.Text = "Введите код двухфакторной авторизации";
                         StatusText.Foreground = System.Windows.Media.Brushes.Orange;
-                        AuthActionButton.IsEnabled = true;
+                        TwoFactorTextBox.Text = "";
+                        TwoFactorTextBox.Focus();
                     });
 
-                    // Wait for code
-                    var waitEvent = new System.Threading.AutoResetEvent(false);
-                    string? result = null;
-                    Dispatcher.Invoke(() =>
-                    {
-                        TwoFactorTextBox.TextChanged += (s, args) =>
-                        {
-                            if (TwoFactorTextBox.Text.Length >= 4)
-                            {
-                                result = TwoFactorTextBox.Text;
-                                waitEvent.Set();
-                            }
-                        };
-                    });
-                    waitEvent.WaitOne(60000); // 1 minute timeout
-                    return result ?? throw new TimeoutException("Таймаут ожидания 2FA кода");
+                    // Wait for the user to enter the code and click the button
+                    var code = await _twoFactorTcs.Task;
+                    return code ?? throw new OperationCanceledException("2FA code was not provided");
                 });
 
                 var user = await VKApiService.Instance.GetCurrentUserAsync();
@@ -152,11 +152,6 @@ namespace VKZ.Views
                 StatusText.Foreground = System.Windows.Media.Brushes.LightGreen;
                 OnAuthSuccess?.Invoke();
             }
-            catch (TimeoutException)
-            {
-                StatusText.Text = "Таймаут ожидания 2FA кода";
-                StatusText.Foreground = System.Windows.Media.Brushes.Red;
-            }
             catch (Exception ex)
             {
                 StatusText.Text = $"Ошибка: {ex.Message}";
@@ -165,13 +160,9 @@ namespace VKZ.Views
             finally
             {
                 AuthActionButton.IsEnabled = true;
-                _waitingForTwoFactor = false;
+                _twoFactorTcs = null;
+                TwoFactorPanel.Visibility = Visibility.Collapsed;
             }
-        }
-
-        private async System.Threading.Tasks.Task SubmitTwoFactor()
-        {
-            // This is handled inside AuthWithPhone via the callback
         }
     }
 }

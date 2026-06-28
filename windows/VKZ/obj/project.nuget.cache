@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "wmKQRmpOsRQ=",
+  "dgSpecHash": "4nHLUtNKaBk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Werhes\\Documents\\GitHub\\VK-Z\\windows\\VKZ\\VKZ.csproj",
+  "projectFilePath": "c:\\Users\\Werhes\\Documents\\GitHub\\VK-Z\\windows\\VKZ\\VKZ.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Werhes\\.nuget\\packages\\htmlagilitypack\\1.11.38\\htmlagilitypack.1.11.38.nupkg.sha512",
     "C:\\Users\\Werhes\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\8.0.0\\microsoft.extensions.dependencyinjection.8.0.0.nupkg.sha512",

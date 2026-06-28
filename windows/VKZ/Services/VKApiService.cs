@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using VkNet;
 using VkNet.Abstractions;
 using VkNet.AudioBypassService.Extensions;
@@ -21,7 +20,6 @@ namespace VKZ.Services
         public static VKApiService Instance => _instance.Value;
 
         private IVkApi? _api;
-        private IVkApiInvoke? _apiInvoke;
         private bool _isAuth;
 
         public bool IsAuthorized => _isAuth;
@@ -29,43 +27,42 @@ namespace VKZ.Services
 
         private VKApiService() { }
 
-        public async Task AuthorizeAsync(string token)
+        private IVkApi CreateApi()
         {
             var services = new ServiceCollection();
             services.AddAudioBypass();
             var provider = services.BuildServiceProvider();
+            return provider.GetRequiredService<IVkApi>();
+        }
 
-            _api = new VkApi(provider);
+        public async Task AuthorizeAsync(string token)
+        {
+            _api = CreateApi();
+
             await _api.AuthorizeAsync(new ApiAuthParams
             {
                 AccessToken = token
             });
 
-            _apiInvoke = _api.Invoke;
             _isAuth = true;
         }
 
         public async Task AuthorizeWithLoginAsync(string login, string password, Func<Task<string>> twoFactorFunc)
         {
-            var services = new ServiceCollection();
-            services.AddAudioBypass();
-            var provider = services.BuildServiceProvider();
-
-            _api = new VkApi(provider);
-            _api.OnTwoFactor += async (sender, args) =>
-            {
-                args.Code = await twoFactorFunc();
-                args.RememberDevice = true;
-            };
+            _api = CreateApi();
 
             await _api.AuthorizeAsync(new ApiAuthParams
             {
                 Login = login,
                 Password = password,
-                Settings = Settings.Audio
+                Settings = Settings.Audio,
+                TwoFactorAuthorization = () =>
+                {
+                    var code = twoFactorFunc().GetAwaiter().GetResult();
+                    return code;
+                }
             });
 
-            _apiInvoke = _api.Invoke;
             _isAuth = true;
         }
 
@@ -97,34 +94,32 @@ namespace VKZ.Services
             });
             return audio.Select(a => new VKTrack
             {
-                Id = a.Id,
-                OwnerId = a.OwnerId,
+                Id = a.Id ?? 0,
+                OwnerId = a.OwnerId ?? 0,
                 Title = a.Title,
                 Artist = a.Artist,
                 Duration = a.Duration,
                 Url = a.Url?.AbsoluteUri,
                 TrackCode = a.TrackCode,
-                AccessKey = a.AccessKey,
-                AlbumId = a.AlbumId
+                AccessKey = a.AccessKey
             }).ToList();
         }
 
         public async Task<List<VKPlaylist>> GetPlaylistsAsync(long ownerId, int count = 100)
         {
-            var playlists = await _api!.Audio.GetPlaylistsAsync(ownerId, count);
+            var playlists = await _api!.Audio.GetPlaylistsAsync(ownerId, (uint?)count);
             return playlists.Select(p => new VKPlaylist
             {
-                Id = p.Id,
-                OwnerId = p.OwnerId,
+                Id = p.Id ?? 0,
+                OwnerId = p.OwnerId ?? 0,
                 Title = p.Title,
                 Description = p.Description,
                 AccessKey = p.AccessKey,
-                Count = p.Count,
+                Count = (int)p.Count,
                 Photo = p.Photo != null ? new VKPhoto
                 {
-                    Photo300 = p.Photo.Photo300?.AbsoluteUri,
-                    Photo600 = p.Photo.Photo600?.AbsoluteUri,
-                    Photo1200 = p.Photo.Photo1200?.AbsoluteUri
+                    Photo300 = p.Photo.Photo300,
+                    Photo600 = p.Photo.Photo600
                 } : null
             }).ToList();
         }
@@ -139,8 +134,8 @@ namespace VKZ.Services
             });
             return result.Select(a => new VKTrack
             {
-                Id = a.Id,
-                OwnerId = a.OwnerId,
+                Id = a.Id ?? 0,
+                OwnerId = a.OwnerId ?? 0,
                 Title = a.Title,
                 Artist = a.Artist,
                 Duration = a.Duration,
@@ -152,11 +147,11 @@ namespace VKZ.Services
 
         public async Task<List<VKTrack>> GetRecommendationsAsync(int count = 50)
         {
-            var result = await _api!.Audio.GetRecommendationsAsync(count: count);
+            var result = await _api!.Audio.GetRecommendationsAsync(count: (uint?)count);
             return result.Select(a => new VKTrack
             {
-                Id = a.Id,
-                OwnerId = a.OwnerId,
+                Id = a.Id ?? 0,
+                OwnerId = a.OwnerId ?? 0,
                 Title = a.Title,
                 Artist = a.Artist,
                 Duration = a.Duration,
@@ -168,11 +163,11 @@ namespace VKZ.Services
 
         public async Task<List<VKTrack>> GetPopularAsync(int count = 50)
         {
-            var result = await _api!.Audio.GetPopularAsync(count: count);
+            var result = await _api!.Audio.GetPopularAsync(count: (uint?)count);
             return result.Select(a => new VKTrack
             {
-                Id = a.Id,
-                OwnerId = a.OwnerId,
+                Id = a.Id ?? 0,
+                OwnerId = a.OwnerId ?? 0,
                 Title = a.Title,
                 Artist = a.Artist,
                 Duration = a.Duration,
@@ -186,7 +181,7 @@ namespace VKZ.Services
         {
             try
             {
-                var json = await CallRawAsync("audio.getMixes", new VkParameters
+                var json = await CallRawAsync("audio.getMixes", new Dictionary<string, string>
                 {
                     ["count"] = count.ToString()
                 });
@@ -203,7 +198,7 @@ namespace VKZ.Services
         {
             try
             {
-                var json = await CallRawAsync("audio.getMixTracks", new VkParameters
+                var json = await CallRawAsync("audio.getMixTracks", new Dictionary<string, string>
                 {
                     ["mix_id"] = mixId,
                     ["count"] = count.ToString()
@@ -217,12 +212,14 @@ namespace VKZ.Services
             }
         }
 
-        private async Task<string> CallRawAsync(string method, VkParameters parameters)
+        private async Task<string> CallRawAsync(string method, IDictionary<string, string> parameters)
         {
-            if (_apiInvoke == null)
+            if (_api == null)
                 throw new InvalidOperationException("Not authorized");
 
-            return await _apiInvoke.InvokeAsync(method, parameters);
+            // IVkApi inherits from IVkInvoke which inherits from IVkApiInvoke
+            var invoke = (IVkApiInvoke)_api;
+            return await invoke.InvokeAsync(method, parameters);
         }
     }
 

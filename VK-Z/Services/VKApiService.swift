@@ -78,6 +78,66 @@ final class VKApiService {
         return (token, userId)
     }
     
+    // MARK: - Auth by Phone + Password + 2FA
+    func authorizeWithLogin(login: String, password: String, twoFactorCode: @escaping (@escaping (String) -> Void) -> Void) async throws {
+        let url = URL(string: "https://api.vk.com/method/auth.login")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("VK-Z/1.0 (iPhone; iOS 17.0; Scale/3.0)", forHTTPHeaderField: "User-Agent")
+        
+        // Build form body
+        var bodyComponents = URLComponents()
+        var queryItems = [
+            URLQueryItem(name: "client_id", value: VKApiConstants.clientId),
+            URLQueryItem(name: "client_secret", value: VKApiConstants.clientSecret),
+            URLQueryItem(name: "username", value: login),
+            URLQueryItem(name: "password", value: password),
+            URLQueryItem(name: "v", value: VKApiConstants.apiVersion),
+            URLQueryItem(name: "scope", value: VKApiConstants.scope),
+            URLQueryItem(name: "grant_type", value: "password")
+        ]
+        bodyComponents.queryItems = queryItems
+        request.httpBody = bodyComponents.query?.data(using: .utf8)
+        
+        // First attempt without 2FA
+        var (data, _) = try await URLSession.shared.data(for: request)
+        var response = try JSONDecoder().decode(VKAuthResponse.self, from: data)
+        
+        // If 2FA required
+        if response.error == "need_validation" || response.validationType == "2fa" || response.error == "need_captcha" {
+            let code = await withCheckedContinuation { continuation in
+                twoFactorCode { code in
+                    continuation.resume(returning: code)
+                }
+            }
+            
+            // Add 2FA code and retry
+            queryItems.append(URLQueryItem(name: "code", value: code))
+            bodyComponents.queryItems = queryItems
+            request.httpBody = bodyComponents.query?.data(using: .utf8)
+            
+            (data, _) = try await URLSession.shared.data(for: request)
+            response = try JSONDecoder().decode(VKAuthResponse.self, from: data)
+        }
+        
+        // Check for error response
+        if let error = response.error {
+            throw VKError.apiError(error)
+        }
+        
+        guard let accessToken = response.accessToken, let uid = response.userId else {
+            throw VKError.apiError("Не удалось получить токен. Проверьте логин и пароль.")
+        }
+        
+        self.token = accessToken
+        self.userId = uid
+        
+        // Save to UserDefaults
+        UserDefaults.standard.set(accessToken, forKey: "vk_access_token")
+        UserDefaults.standard.set(uid, forKey: "vk_user_id")
+    }
+    
     // MARK: - API Requests
     private func request<T: Decodable>(
         _ method: String,
@@ -334,6 +394,27 @@ final class VKApiService {
                 completion(.failure(error))
             }
         }
+    }
+}
+
+// MARK: - Auth Response Models
+struct VKAuthResponse: Decodable {
+    let accessToken: String?
+    let userId: Int?
+    let error: String?
+    let errorCode: Int?
+    let validationType: String?
+    let validationSid: String?
+    let phoneMask: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case userId = "user_id"
+        case error = "error"
+        case errorCode = "error_code"
+        case validationType = "validation_type"
+        case validationSid = "validation_sid"
+        case phoneMask = "phone_mask"
     }
 }
 
