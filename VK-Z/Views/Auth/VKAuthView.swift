@@ -15,6 +15,9 @@ struct VKAuthView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var twoFactorContinuation: ((String) -> Void)?
+    @State private var logoScale: CGFloat = 0.8
+    @State private var logoOpacity: Double = 0
+    @State private var contentOffset: CGFloat = 50
     
     enum AuthMode: String, CaseIterable {
         case token = "По токену"
@@ -23,44 +26,57 @@ struct VKAuthView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.15, green: 0.20, blue: 0.30),
-                    Color(red: 0.05, green: 0.08, blue: 0.15)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            AppColors.authGradient.ignoresSafeArea()
+            
+            // Animated background circles
+            ZStack {
+                Circle()
+                    .fill(AppColors.accentBlue.opacity(0.08))
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 60)
+                    .offset(x: -120, y: -200)
+                
+                Circle()
+                    .fill(AppColors.accentPurple.opacity(0.08))
+                    .frame(width: 250, height: 250)
+                    .blur(radius: 60)
+                    .offset(x: 140, y: -150)
+            }
             
             ScrollView {
                 VStack(spacing: 24) {
-                    Spacer().frame(height: 40)
+                    Spacer().frame(height: 60)
                     
                     // Logo
                     VStack(spacing: 16) {
-                        Image(systemName: "music.note.list")
-                            .font(.system(size: 60))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                        ZStack {
+                            Circle()
+                                .fill(AppColors.primaryGradient)
+                                .frame(width: 100, height: 100)
+                                .shadow(color: AppColors.accentBlue.opacity(0.4), radius: 25, y: 8)
+                            
+                            Image(systemName: "music.note.list")
+                                .font(.system(size: 44))
+                                .foregroundColor(.white)
+                        }
+                        .scaleEffect(logoScale)
+                        .opacity(logoOpacity)
                         
                         Text("VK Z")
                             .font(.custom("VKSansDisplay-Bold", size: 36))
                             .foregroundColor(.white)
+                            .opacity(logoOpacity)
                         
                         Text("Музыка ВКонтакте\nбез ограничений")
                             .font(.custom("VKSansDisplay-Regular", size: 15))
-                            .foregroundColor(.gray)
+                            .foregroundColor(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
+                            .opacity(logoOpacity)
                     }
+                    .offset(y: contentOffset)
                     
-                    Spacer().frame(height: 20)
+                    Spacer().frame(height: 10)
                     
                     // Auth mode picker
                     Picker("Способ входа", selection: $authMode) {
@@ -70,23 +86,31 @@ struct VKAuthView: View {
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 40)
+                    .offset(y: contentOffset)
+                    .opacity(logoOpacity)
                     
                     // Token input
                     if authMode == .token {
                         VStack(spacing: 12) {
                             Text("Введите токен доступа")
                                 .font(.custom("VKSansDisplay-Regular", size: 13))
-                                .foregroundColor(.gray)
+                                .foregroundColor(AppColors.textSecondary)
                             
                             SecureField("Токен VK", text: $tokenInput)
                                 .textFieldStyle(.plain)
-                                .padding(12)
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(10)
+                                .padding(14)
+                                .background(AppColors.surfaceLight)
+                                .cornerRadius(14)
                                 .foregroundColor(.white)
-                                .font(.custom("VKSansDisplay-Regular", size: 14))
+                                .font(.custom("VKSansDisplay-Regular", size: 15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                                )
                         }
                         .padding(.horizontal, 40)
+                        .offset(y: contentOffset)
+                        .opacity(logoOpacity)
                     }
                     
                     // Phone + Password input
@@ -94,44 +118,60 @@ struct VKAuthView: View {
                         VStack(spacing: 12) {
                             TextField("Номер телефона", text: $phoneInput)
                                 .textFieldStyle(.plain)
-                                .padding(12)
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(10)
+                                .padding(14)
+                                .background(AppColors.surfaceLight)
+                                .cornerRadius(14)
                                 .foregroundColor(.white)
-                                .font(.custom("VKSansDisplay-Regular", size: 14))
+                                .font(.custom("VKSansDisplay-Regular", size: 15))
                                 .keyboardType(.phonePad)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                                )
                             
                             SecureField("Пароль", text: $passwordInput)
                                 .textFieldStyle(.plain)
-                                .padding(12)
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(10)
+                                .padding(14)
+                                .background(AppColors.surfaceLight)
+                                .cornerRadius(14)
                                 .foregroundColor(.white)
-                                .font(.custom("VKSansDisplay-Regular", size: 14))
+                                .font(.custom("VKSansDisplay-Regular", size: 15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                                )
                         }
                         .padding(.horizontal, 40)
+                        .offset(y: contentOffset)
+                        .opacity(logoOpacity)
                         
                         // 2FA Code Input
                         if showTwoFactor {
                             VStack(spacing: 8) {
                                 Text("Код двухфакторной авторизации")
                                     .font(.custom("VKSansDisplay-Regular", size: 13))
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(AppColors.accentOrange)
                                 
                                 TextField("Код", text: $twoFactorCode)
                                     .textFieldStyle(.plain)
-                                    .padding(12)
-                                    .background(Color.white.opacity(0.1))
-                                    .cornerRadius(10)
+                                    .padding(14)
+                                    .background(AppColors.surfaceLight)
+                                    .cornerRadius(14)
                                     .foregroundColor(.white)
-                                    .font(.custom("VKSansDisplay-Regular", size: 14))
+                                    .font(.custom("VKSansDisplay-Regular", size: 15))
                                     .keyboardType(.numberPad)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(AppColors.accentOrange.opacity(0.3), lineWidth: 1)
+                                    )
                             }
                             .padding(.horizontal, 40)
+                            .offset(y: contentOffset)
+                            .opacity(logoOpacity)
                         }
                     }
                     
-                    // WebView auth button (only for token mode via OAuth)
+                    // WebView auth button
                     if authMode == .token {
                         Button(action: { showWebView = true }) {
                             HStack(spacing: 12) {
@@ -142,32 +182,36 @@ struct VKAuthView: View {
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.blue, Color.blue.opacity(0.8)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(14)
-                            .shadow(color: .blue.opacity(0.4), radius: 8, y: 4)
+                            .frame(height: 52)
+                            .background(AppColors.primaryGradient)
+                            .cornerRadius(16)
+                            .shadow(color: AppColors.accentBlue.opacity(0.3), radius: 12, y: 6)
                         }
                         .padding(.horizontal, 40)
+                        .offset(y: contentOffset)
+                        .opacity(logoOpacity)
                     }
                     
-                    // Login button (for token direct input or phone)
+                    // Login button
                     Button(action: performAuth) {
                         Text(authMode == .token ? "Войти по токену" : showTwoFactor ? "Отправить код 2FA" : "Войти")
                             .font(.custom("VKSansDisplay-Medium", size: 17))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(Color.blue.opacity(0.7))
-                            .cornerRadius(14)
+                            .frame(height: 52)
+                            .background(
+                                LinearGradient(
+                                    colors: [AppColors.accentBlue.opacity(0.8), AppColors.accentBlue.opacity(0.6)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(16)
                     }
                     .padding(.horizontal, 40)
                     .disabled(isLoading)
+                    .offset(y: contentOffset)
+                    .opacity(logoOpacity)
                     
                     if isLoading {
                         ProgressView()
@@ -187,7 +231,7 @@ struct VKAuthView: View {
                     
                     Text("v1.0 · by Werhes")
                         .font(.custom("VKSansDisplay-Regular", size: 12))
-                        .foregroundColor(.gray.opacity(0.6))
+                        .foregroundColor(AppColors.textTertiary)
                         .padding(.bottom, 20)
                 }
             }
@@ -202,6 +246,13 @@ struct VKAuthView: View {
         }
         .onOpenURL { url in
             authManager.handleUrl(url)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.8)) {
+                logoScale = 1.0
+                logoOpacity = 1.0
+                contentOffset = 0
+            }
         }
     }
     
@@ -237,7 +288,6 @@ struct VKAuthView: View {
                     isLoading = false
                     return
                 }
-                // Submit 2FA code via closure
                 continuation(code)
                 twoFactorContinuation = nil
                 showTwoFactor = false

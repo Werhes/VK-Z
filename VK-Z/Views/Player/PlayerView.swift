@@ -22,21 +22,75 @@ struct PlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var dragOffset: CGFloat = 0
     @State private var showQueue = false
+    @State private var isCoverAnimating = false
+    @State private var coverScale: CGFloat = 1.0
     
     var body: some View {
         ZStack {
-            Color.vkBackground.ignoresSafeArea()
+            // Animated background
+            AppColors.background.ignoresSafeArea()
+            
+            // Background blur from cover art
+            if let track = player.currentTrack {
+                AsyncImage(url: track.coverUrl) { phase in
+                    if case .success(let image) = phase {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .blur(radius: 80)
+                            .opacity(0.3)
+                            .ignoresSafeArea()
+                    }
+                }
+            }
             
             if let track = player.currentTrack {
                 VStack(spacing: 0) {
-                    dragHandle
+                    // Top bar
+                    HStack {
+                        Button(action: { dismiss() }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Сейчас играет")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .foregroundColor(AppColors.textSecondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {}) {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    
                     Spacer()
+                    
+                    // Cover Art
                     coverArtView(track: track)
+                    
                     Spacer()
+                    
+                    // Track Info
                     trackInfoView(track: track)
+                    
+                    // Progress Bar
                     progressBarView
+                        .padding(.top, 8)
+                    
+                    // Controls
                     controlsView
+                        .padding(.top, 16)
+                    
+                    // Bottom Controls
                     bottomControlsView
+                        .padding(.top, 12)
+                    
                     Spacer()
                 }
                 .padding(.horizontal, 24)
@@ -48,7 +102,7 @@ struct PlayerView: View {
                         }
                         .onEnded { value in
                             if value.translation.height > 150 { dismiss() }
-                            else { withAnimation(.spring()) { dragOffset = 0 } }
+                            else { withAnimation(AppAnimation.spring) { dragOffset = 0 } }
                         }
                 )
             } else {
@@ -57,60 +111,73 @@ struct PlayerView: View {
         }
         .overlay(alignment: .bottom) {
             if showQueue {
-                queueView.transition(.move(edge: .bottom))
+                queueView
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-    }
-    
-    private var dragHandle: some View {
-        HStack {
-            RoundedRectangle(cornerRadius: 2.5)
-                .fill(Color.gray.opacity(0.5))
-                .frame(width: 40, height: 5)
-                .padding(.top, 12)
-            Spacer()
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.gray)
+        .onChange(of: player.playerState) { _, newState in
+            withAnimation(AppAnimation.smooth) {
+                isCoverAnimating = newState == .playing
             }
-            .padding(.top, 8)
         }
     }
     
     private func coverArtView(track: VKTrack) -> some View {
-        AsyncImage(url: track.coverUrl) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().aspectRatio(contentMode: .fill)
-            case .failure:
-                ZStack {
-                    Color.vkSurface
-                    Image(systemName: "music.note").font(.system(size: 60)).foregroundColor(.gray)
+        ZStack {
+            AsyncImage(url: track.coverUrl) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .scaleEffect(isCoverAnimating ? 1.0 : 0.95)
+                case .failure:
+                    ZStack {
+                        AppColors.surfaceLight
+                        Image(systemName: "music.note")
+                            .font(.system(size: 60))
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                case .empty:
+                    ZStack {
+                        AppColors.surfaceLight
+                        ProgressView()
+                            .tint(AppColors.textSecondary)
+                    }
+                @unknown default:
+                    EmptyView()
                 }
-            case .empty:
-                ZStack {
-                    Color.vkSurface
-                    ProgressView().tint(.gray)
-                }
-            @unknown default:
-                EmptyView()
             }
+            .frame(width: 320, height: 320)
+            .cornerRadius(24)
+            .shadow(color: .black.opacity(0.5), radius: 30, y: 15)
+            .scaleEffect(coverScale)
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { scale in
+                        coverScale = min(max(scale, 0.8), 1.2)
+                    }
+                    .onEnded { _ in
+                        withAnimation(AppAnimation.spring) {
+                            coverScale = 1.0
+                        }
+                    }
+            )
         }
-        .frame(width: 300, height: 300)
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
     }
     
     private func trackInfoView(track: VKTrack) -> some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(track.title)
-                    .font(.custom("VKSansDisplay-Bold", size: 22))
-                    .foregroundColor(.white).lineLimit(1)
+                    .font(.custom("VKSansDisplay-Bold", size: 24))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
                 Text(track.artist)
-                    .font(.custom("VKSansDisplay-Medium", size: 16))
-                    .foregroundColor(.gray).lineLimit(1)
+                    .font(.custom("VKSansDisplay-Medium", size: 17))
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(1)
                 
                 // VK Mix Button
                 Button(action: { createMixFromCurrentTrack() }) {
@@ -120,128 +187,181 @@ struct PlayerView: View {
                         Text("Создать микс")
                             .font(.custom("VKSansDisplay-Medium", size: 13))
                     }
-                    .foregroundColor(.purple)
+                    .foregroundColor(AppColors.accentPurple)
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(Color.purple.opacity(0.15))
-                    .cornerRadius(8)
+                    .padding(.vertical, 7)
+                    .background(AppColors.accentPurple.opacity(0.12))
+                    .cornerRadius(10)
                 }
                 .padding(.top, 4)
             }
+            
             Spacer()
+            
             Button(action: {}) {
                 Image(systemName: "ellipsis.circle.fill")
-                    .font(.title2).foregroundColor(.gray)
+                    .font(.title2)
+                    .foregroundColor(AppColors.textSecondary)
                     .symbolRenderingMode(.hierarchical)
             }
         }
-        .padding(.top, 24)
+        .padding(.top, 20)
     }
     
     private var progressBarView: some View {
         VStack(spacing: 6) {
-            Slider(
-                value: Binding(
-                    get: { player.currentTime },
-                    set: { player.seek(to: $0) }
-                ),
-                in: 0...max(player.duration, 1)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(AppColors.surfaceLight)
+                    .frame(height: 5)
+                
+                Capsule()
+                    .fill(AppColors.primaryGradient)
+                    .frame(
+                        width: max(CGFloat(player.duration > 0 ? player.currentTime / player.duration : 0) * (UIScreen.main.bounds.width - 48), 0),
+                        height: 5
+                    )
+            }
+            .overlay(
+                // Slider overlay for interaction
+                Slider(
+                    value: Binding(
+                        get: { player.currentTime },
+                        set: { player.seek(to: $0) }
+                    ),
+                    in: 0...max(player.duration, 1)
+                )
+                .tint(.clear)
+                .background(Capsule().fill(.clear).frame(height: 5))
             )
-            .tint(.white)
-            .background(Capsule().fill(Color.white.opacity(0.2)).frame(height: 4))
             
             HStack {
                 Text(formatTime(player.currentTime))
-                    .font(.custom("VKSansDisplay-Regular", size: 12)).foregroundColor(.gray)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColors.textTertiary)
                 Spacer()
                 Text(formatTime(player.duration))
-                    .font(.custom("VKSansDisplay-Regular", size: 12)).foregroundColor(.gray)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColors.textTertiary)
             }
         }
-        .padding(.top, 16)
     }
     
     private var controlsView: some View {
-        HStack(spacing: 32) {
+        HStack(spacing: 28) {
             Button(action: { player.toggleShuffle() }) {
                 Image(systemName: "shuffle")
-                    .font(.title2)
-                    .foregroundColor(player.isShuffled ? .blue : .gray)
+                    .font(.system(size: 20))
+                    .foregroundColor(player.isShuffled ? AppColors.accentBlue : AppColors.textSecondary)
             }
             
             Button(action: { player.previousTrack() }) {
                 Image(systemName: "backward.fill")
-                    .font(.system(size: 28)).foregroundColor(.white)
+                    .font(.system(size: 26))
+                    .foregroundColor(.white)
             }
             
             Button(action: { player.togglePlayPause() }) {
                 ZStack {
-                    Circle().fill(Color.white).frame(width: 72, height: 72)
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 76, height: 76)
+                        .shadow(color: .white.opacity(0.2), radius: 15, y: 5)
+                    
                     Image(systemName: player.playerState == .playing ? "pause.fill" : "play.fill")
-                        .font(.system(size: 30)).foregroundColor(.black)
+                        .font(.system(size: 32))
+                        .foregroundColor(.black)
                         .offset(x: player.playerState == .playing ? 0 : 2)
                 }
             }
             
             Button(action: { player.nextTrack() }) {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 28)).foregroundColor(.white)
+                    .font(.system(size: 26))
+                    .foregroundColor(.white)
             }
             
             Button(action: { player.toggleRepeatMode() }) {
                 ZStack {
                     Image(systemName: "repeat")
-                        .font(.title2)
-                        .foregroundColor(player.repeatMode != .off ? .blue : .gray)
+                        .font(.system(size: 20))
+                        .foregroundColor(player.repeatMode != .off ? AppColors.accentBlue : AppColors.textSecondary)
                     if player.repeatMode == .one {
                         Text("1")
                             .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(.blue).offset(y: 6)
+                            .foregroundColor(AppColors.accentBlue)
+                            .offset(y: 6)
                     }
                 }
             }
         }
-        .padding(.top, 20)
     }
     
     private var bottomControlsView: some View {
-        HStack(spacing: 20) {
-            HStack(spacing: 8) {
-                Image(systemName: "speaker.fill").font(.caption).foregroundColor(.gray)
-                Slider(
-                    value: Binding(
-                        get: { player.volume },
-                        set: { player.setVolume($0) }
-                    ),
-                    in: 0...1
+        HStack(spacing: 16) {
+            HStack(spacing: 10) {
+                Image(systemName: "speaker.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textTertiary)
+                
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(AppColors.surfaceLight)
+                        .frame(height: 4)
+                    
+                    Capsule()
+                        .fill(AppColors.primaryGradient)
+                        .frame(width: CGFloat(player.volume) * 120, height: 4)
+                }
+                .frame(width: 120)
+                .overlay(
+                    Slider(
+                        value: Binding(
+                            get: { player.volume },
+                            set: { player.setVolume($0) }
+                        ),
+                        in: 0...1
+                    )
+                    .tint(.clear)
                 )
-                .tint(.white)
-                Image(systemName: "speaker.wave.3.fill").font(.caption).foregroundColor(.gray)
+                
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textTertiary)
             }
             .frame(maxWidth: .infinity)
             
-            Button(action: { withAnimation { showQueue.toggle() } }) {
+            Button(action: { withAnimation(AppAnimation.spring) { showQueue.toggle() } }) {
                 Image(systemName: "list.bullet")
-                    .font(.title3)
-                    .foregroundColor(showQueue ? .blue : .gray)
+                    .font(.system(size: 18))
+                    .foregroundColor(showQueue ? AppColors.accentBlue : AppColors.textSecondary)
+                    .frame(width: 44, height: 44)
+                    .background(AppColors.surfaceLight)
+                    .clipShape(Circle())
             }
         }
-        .padding(.top, 16)
-        .padding(.bottom, 40)
+        .padding(.bottom, 20)
     }
     
     private var queueView: some View {
         VStack(spacing: 0) {
-            Capsule().fill(Color.gray.opacity(0.5)).frame(width: 40, height: 5).padding(.top, 12)
+            // Handle
+            Capsule()
+                .fill(AppColors.textTertiary)
+                .frame(width: 40, height: 5)
+                .padding(.top, 12)
             
             HStack {
                 Text("Очередь")
-                    .font(.custom("VKSansDisplay-Bold", size: 18)).foregroundColor(.white)
+                    .font(.custom("VKSansDisplay-Bold", size: 20))
+                    .foregroundColor(.white)
                 Spacer()
                 Text("\(player.queue.count) треков")
-                    .font(.custom("VKSansDisplay-Regular", size: 13)).foregroundColor(.gray)
+                    .font(.custom("VKSansDisplay-Regular", size: 13))
+                    .foregroundColor(AppColors.textSecondary)
             }
-            .padding(.horizontal, 20).padding(.top, 16)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
             
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 0) {
@@ -249,65 +369,103 @@ struct PlayerView: View {
                         HStack(spacing: 12) {
                             AsyncImage(url: track.coverUrl) { phase in
                                 switch phase {
-                                case .success(let image): image.resizable().aspectRatio(contentMode: .fill)
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
                                 case .failure:
                                     ZStack {
-                                        Color.vkSurface
-                                        Image(systemName: "music.note").foregroundColor(.gray)
+                                        AppColors.surfaceLight
+                                        Image(systemName: "music.note")
+                                            .foregroundColor(AppColors.textSecondary)
                                     }
                                 case .empty:
                                     ZStack {
-                                        Color.vkSurface
-                                        ProgressView().tint(.gray)
+                                        AppColors.surfaceLight
+                                        ProgressView()
+                                            .tint(AppColors.textSecondary)
                                     }
-                                @unknown default: EmptyView()
+                                @unknown default:
+                                    EmptyView()
                                 }
                             }
-                            .frame(width: 40, height: 40).cornerRadius(8)
+                            .frame(width: 44, height: 44)
+                            .cornerRadius(10)
                             
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text(track.title)
-                                    .font(.custom("VKSansDisplay-Medium", size: 14))
-                                    .foregroundColor(index == player.currentIndex ? .blue : .white).lineLimit(1)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(index == player.currentIndex ? AppColors.accentBlue : .white)
+                                    .lineLimit(1)
                                 Text(track.artist)
-                                    .font(.custom("VKSansDisplay-Regular", size: 12))
-                                    .foregroundColor(.gray).lineLimit(1)
+                                    .font(.system(size: 12, weight: .regular))
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .lineLimit(1)
                             }
                             
                             Spacer()
                             
                             if index == player.currentIndex {
                                 Image(systemName: "speaker.wave.3.fill")
-                                    .font(.caption).foregroundColor(.blue)
+                                    .font(.caption)
+                                    .foregroundColor(AppColors.accentBlue)
                             }
                             
                             Button(action: { player.removeFromQueue(at: index) }) {
-                                Image(systemName: "xmark").font(.caption).foregroundColor(.gray)
+                                Image(systemName: "xmark")
+                                    .font(.caption)
+                                    .foregroundColor(AppColors.textTertiary)
                             }
                         }
-                        .padding(.horizontal, 20).padding(.vertical, 8)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
                         
                         if index < player.queue.count - 1 {
-                            Divider().background(Color.white.opacity(0.05)).padding(.leading, 72)
+                            Divider()
+                                .background(AppColors.surfaceLight)
+                                .padding(.leading, 76)
                         }
                     }
                 }
             }
         }
-        .frame(height: 350)
-        .background(Color.vkCardBackground)
-        .cornerRadius(20, corners: [.topLeft, .topRight])
+        .frame(height: 380)
+        .background(
+            ZStack {
+                Color.black.opacity(0.8)
+                AppColors.glassGradient
+            }
+        )
+        .background(.ultraThinMaterial)
+        .cornerRadius(24, corners: [.topLeft, .topRight])
     }
     
     private var emptyPlayerView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             Spacer()
-            Image(systemName: "music.note").font(.system(size: 80)).foregroundColor(.gray.opacity(0.3))
-            Text("Ничего не играет")
-                .font(.custom("VKSansDisplay-Bold", size: 22)).foregroundColor(.white)
-            Text("Выберите трек из плейлиста\nили найдите через поиск")
-                .font(.custom("VKSansDisplay-Regular", size: 15))
-                .foregroundColor(.gray).multilineTextAlignment(.center).lineSpacing(4)
+            
+            ZStack {
+                Circle()
+                    .fill(AppColors.surfaceLight)
+                    .frame(width: 140, height: 140)
+                
+                Image(systemName: "music.note")
+                    .font(.system(size: 60))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            
+            VStack(spacing: 8) {
+                Text("Ничего не играет")
+                    .font(.custom("VKSansDisplay-Bold", size: 24))
+                    .foregroundColor(.white)
+                
+                Text("Выберите трек из плейлиста\nили найдите через поиск")
+                    .font(.custom("VKSansDisplay-Regular", size: 15))
+                    .foregroundColor(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+            
             Spacer()
         }
     }
@@ -341,5 +499,6 @@ struct RoundedCorner: Shape {
 }
 
 #Preview {
-    PlayerView().preferredColorScheme(.dark)
+    PlayerView()
+        .preferredColorScheme(.dark)
 }

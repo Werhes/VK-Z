@@ -17,16 +17,16 @@ struct SearchView: View {
                     searchResultsView
                 }
             }
-            .background(Color.vkBackground)
+            .background(AppColors.background)
         }
     }
     
     private var searchBar: some View {
         HStack(spacing: 12) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.gray)
-                    .font(.system(size: 16))
+                    .foregroundColor(AppColors.textSecondary)
+                    .font(.system(size: 16, weight: .medium))
                 
                 TextField("Поиск треков, альбомов...", text: $searchText)
                     .font(.custom("VKSansDisplay-Regular", size: 16))
@@ -43,15 +43,19 @@ struct SearchView: View {
                         viewModel.clearSearch()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.gray)
+                            .foregroundColor(AppColors.textTertiary)
                             .font(.system(size: 16))
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.vkCardBackground)
-            .cornerRadius(12)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(AppColors.surfaceLight)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSearchFocused ? AppColors.accentBlue.opacity(0.3) : .clear, lineWidth: 1)
+            )
             
             if isSearchFocused {
                 Button("Отмена") {
@@ -60,21 +64,40 @@ struct SearchView: View {
                     viewModel.clearSearch()
                 }
                 .font(.custom("VKSansDisplay-Medium", size: 15))
-                .foregroundColor(.blue)
+                .foregroundColor(AppColors.accentBlue)
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
     
     private var emptyStateView: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Поиск по жанрам")
-                        .font(.custom("VKSansDisplay-Bold", size: 22))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
+            VStack(alignment: .leading, spacing: 24) {
+                // Genres
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(AppColors.warmGradient)
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "music.note.list")
+                                .font(.system(size: 14))
+                                .foregroundColor(.white)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Поиск по жанрам")
+                                .font(.custom("VKSansDisplay-Bold", size: 22))
+                                .foregroundColor(.white)
+                            
+                            Text("Выберите жанр для поиска")
+                                .font(.custom("VKSansDisplay-Regular", size: 13))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, 20)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
@@ -88,8 +111,12 @@ struct SearchView: View {
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 20)
                                         .padding(.vertical, 10)
-                                        .background(Color.vkSurface)
-                                        .cornerRadius(20)
+                                        .background(AppColors.surfaceLight)
+                                        .cornerRadius(22)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 22)
+                                                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                                        )
                                 }
                             }
                         }
@@ -97,30 +124,51 @@ struct SearchView: View {
                     }
                 }
                 
+                // Popular tracks
                 if !viewModel.popularTracks.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Популярные треки")
-                            .font(.custom("VKSansDisplay-Bold", size: 22))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.coolGradient)
+                                    .frame(width: 32, height: 32)
+                                
+                                Image(systemName: "flame.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Популярные треки")
+                                    .font(.custom("VKSansDisplay-Bold", size: 22))
+                                    .foregroundColor(.white)
+                                
+                                Text("Что в тренде")
+                                    .font(.custom("VKSansDisplay-Regular", size: 13))
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                        }
+                        .padding(.horizontal, 20)
                         
                         LazyVStack(spacing: 0) {
                             ForEach(Array(viewModel.popularTracks.enumerated()), id: \.element.id) { index, track in
                                 TrackRowView(track: track, index: index + 1)
                                     .onTapGesture { viewModel.playTrack(track) }
                                 if index < viewModel.popularTracks.count - 1 {
-                                    Divider().background(Color.white.opacity(0.05)).padding(.leading, 60)
+                                    Divider()
+                                        .background(AppColors.surfaceLight)
+                                        .padding(.leading, 60)
                                 }
                             }
                         }
-                        .background(Color.vkCardBackground)
+                        .background(AppColors.cardBackground)
                         .cornerRadius(16)
                         .padding(.horizontal, 16)
                     }
                 }
             }
             .padding(.top, 16)
-            .padding(.bottom, 100)
+            .padding(.bottom, 120)
         }
     }
     
@@ -130,10 +178,16 @@ struct SearchView: View {
                 VStack(spacing: 16) {
                     ForEach(0..<8) { _ in
                         HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 8).fill(Color.vkSurface).frame(width: 44, height: 44)
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(AppColors.surfaceLight)
+                                .frame(width: 44, height: 44)
                             VStack(alignment: .leading, spacing: 6) {
-                                RoundedRectangle(cornerRadius: 4).fill(Color.vkSurface).frame(width: 180, height: 12)
-                                RoundedRectangle(cornerRadius: 4).fill(Color.vkSurface).frame(width: 120, height: 10)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(AppColors.surfaceLight)
+                                    .frame(width: 180, height: 12)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(AppColors.surfaceLight)
+                                    .frame(width: 120, height: 10)
                             }
                             Spacer()
                         }
@@ -142,46 +196,71 @@ struct SearchView: View {
                 }
                 .padding(.top, 16)
             } else if viewModel.searchResults.isEmpty {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     Spacer().frame(height: 60)
-                    Image(systemName: "music.note.magnifyingglass")
-                        .font(.system(size: 60))
-                        .foregroundColor(.gray.opacity(0.5))
-                    Text("Ничего не найдено")
-                        .font(.custom("VKSansDisplay-Medium", size: 18))
-                        .foregroundColor(.gray)
-                    Text("Попробуйте изменить запрос")
-                        .font(.custom("VKSansDisplay-Regular", size: 14))
-                        .foregroundColor(.gray.opacity(0.7))
+                    
+                    ZStack {
+                        Circle()
+                            .fill(AppColors.surfaceLight)
+                            .frame(width: 100, height: 100)
+                        
+                        Image(systemName: "music.note.magnifyingglass")
+                            .font(.system(size: 44))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                    
+                    VStack(spacing: 6) {
+                        Text("Ничего не найдено")
+                            .font(.custom("VKSansDisplay-Medium", size: 18))
+                            .foregroundColor(AppColors.textSecondary)
+                        
+                        Text("Попробуйте изменить запрос")
+                            .font(.custom("VKSansDisplay-Regular", size: 14))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
             } else {
                 LazyVStack(spacing: 0) {
                     HStack {
-                        Text("Результаты поиска")
-                            .font(.custom("VKSansDisplay-Bold", size: 22))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 16))
+                                .foregroundColor(AppColors.accentBlue)
+                            
+                            Text("Результаты поиска")
+                                .font(.custom("VKSansDisplay-Bold", size: 20))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        
                         Spacer()
+                        
+                        Text("\(viewModel.searchResults.count)")
+                            .font(.custom("VKSansDisplay-Regular", size: 13))
+                            .foregroundColor(AppColors.textTertiary)
+                            .padding(.trailing, 20)
                     }
                     
                     ForEach(Array(viewModel.searchResults.enumerated()), id: \.element.id) { index, track in
                         TrackRowView(track: track, index: index + 1)
                             .onTapGesture { viewModel.playTrack(track) }
                         if index < viewModel.searchResults.count - 1 {
-                            Divider().background(Color.white.opacity(0.05)).padding(.leading, 60)
+                            Divider()
+                                .background(AppColors.surfaceLight)
+                                .padding(.leading, 60)
                         }
                     }
                 }
-                .background(Color.vkCardBackground)
+                .background(AppColors.cardBackground)
                 .cornerRadius(16)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
         }
-        .padding(.bottom, 100)
+        .padding(.bottom, 120)
     }
 }
 
@@ -262,5 +341,6 @@ final class SearchViewModel: ObservableObject {
 }
 
 #Preview {
-    SearchView().preferredColorScheme(.dark)
+    SearchView()
+        .preferredColorScheme(.dark)
 }
