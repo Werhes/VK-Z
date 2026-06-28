@@ -102,10 +102,40 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
+  windows-build:
+    name: Windows Build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore NuGet packages
+        run: |
+          cd windows
+          dotnet restore
+
+      - name: Build Windows project
+        run: |
+          cd windows
+          dotnet publish VKZ/VKZ.csproj -c Release -o publish
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: vkz-windows
+          path: windows/publish/
+          retention-days: 30
+
   create-release:
     name: Create Release
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true'
-    needs: [ios-build, android-build]
+    needs: [ios-build, android-build, windows-build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -119,11 +149,17 @@ jobs:
           name: vkz-android-apk
           path: ./artifacts
 
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: vkz-windows
+          path: ./artifacts/windows
+
       - name: Check if release already exists
         id: check_release
         run: |
           EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: token ${{ secrets.TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.RELEASE_NAME }}")
           echo "exists=$EXISTS" >> $GITHUB_OUTPUT
           if [ "$EXISTS" = "200" ]; then
@@ -144,6 +180,7 @@ jobs:
           ### Что нового:
           - iOS плеер для VK Музыки (SwiftUI)
           - Android плеер для VK Музыки (Kotlin + Jetpack Compose)
+          - Windows плеер для VK Музыки (C# WPF .NET 8)
           - VK Микс — персональные подборки
           - Поиск треков и плейлистов
           - Фоновое воспроизведение
@@ -152,10 +189,12 @@ jobs:
           ### Файлы:
           - `VK-Z/` — исходный код iOS (Xcode project)
           - `android/` — исходный код Android (Gradle project)
+          - `windows/` — исходный код Windows (WPF .NET 8)
           - `app-debug.apk` — Android APK для установки
+          - `windows/` — Windows сборка
 
           ### Требования:
-          - iOS 17.0+ / Android 8.0+
+          - iOS 17.0+ / Android 8.0+ / Windows 10+
           - Аккаунт ВКонтакте
 
           ---
@@ -176,14 +215,15 @@ jobs:
           prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           files: |
             ./artifacts/app-debug.apk
+            ./artifacts/windows/**/*
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
 
   notify-telegram:
     name: Telegram Notification
     if: github.event_name == 'workflow_dispatch' && always()
-    needs: [ios-build, android-build, create-release]
+    needs: [ios-build, android-build, windows-build, create-release]
     runs-on: ubuntu-latest
     steps:
       - name: Send Telegram notification
@@ -203,6 +243,7 @@ jobs:
 
             <b>iOS Build:</b> ${{ needs.ios-build.result == 'success' && '✅ Success' || needs.ios-build.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
             <b>Android Build:</b> ${{ needs.android-build.result == 'success' && '✅ Success' || needs.android-build.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
+            <b>Windows Build:</b> ${{ needs.windows-build.result == 'success' && '✅ Success' || needs.windows-build.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
             <b>Release:</b> ${{ needs.create-release.result == 'success' && '✅ Created' || needs.create-release.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
 
             ${{ github.event.head_commit.message && format('<b>Message:</b> {0}', github.event.head_commit.message) || '' }}

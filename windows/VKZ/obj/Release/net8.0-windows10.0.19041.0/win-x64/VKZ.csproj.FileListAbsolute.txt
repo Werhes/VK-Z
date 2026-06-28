@@ -1,0 +1,13 @@
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\VKZ.csproj.AssemblyReference.cache
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\Themes\Colors.baml
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\Themes\Styles.baml
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\Views\AuthView.baml
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\App.baml
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\Views\AuthView.g.cs
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\Views\PopularView.g.cs
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\Views\SearchView.g.cs
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\App.g.cs
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\VKZ_Content.g.cs
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\GeneratedInternalTypeHelper.g.cs
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\VKZ_MarkupCompile.cache
+C:\Users\Werhes\Documents\GitHub\VK-Z\windows\VKZ\obj\Release\net8.0-windows10.0.19041.0\win-x64\VKZ_MarkupCompile.lref
