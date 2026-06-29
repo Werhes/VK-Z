@@ -1,4 +1,4 @@
-name: 🍎 iOS Build & Release
+name: 📱 VK-Z Build All (Android + iOS)
 
 on:
   workflow_dispatch:
@@ -21,29 +21,72 @@ on:
 
 env:
   APP_NAME: 'VK-Z'
-  SCHEME_NAME: 'VKZ'
+  APK_OUTPUT_NAME: 'VK-Z-Universal.apk'
   IOS_IPA_NAME: 'VK-Z-iOS.ipa'
 
 jobs:
+  build-android:
+    name: 🤖 Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout репозитория
+        uses: actions/checkout@v4
+
+      - name: ☕ Установка Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🏗 Установка Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 🔧 Кэширование Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 📦 Сборка Universal APK (Debug)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+        shell: bash
+
+      - name: 📋 Поиск APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find android/app/build/outputs -name "*.apk" -type f | head -1)
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Найден APK: $APK_PATH"
+
+      - name: 📤 Загрузка APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_OUTPUT_NAME }}
+          path: ${{ steps.find_apk.outputs.APK_PATH }}
+          if-no-files-found: error
+
   build-ios:
-    name: 🔨 iOS IPA
+    name: 🍎 iOS IPA
     runs-on: macos-latest
 
     steps:
       - name: 📥 Checkout репозитория
         uses: actions/checkout@v4
 
-      - name: 🔍 Проверка Xcode
-        run: |
-          xcodebuild -version
-          xcode-select -p
-
       - name: 📦 Генерация Xcode проекта из Package.swift
         run: |
           cd VK-Z
           swift package generate-xcodeproj
           echo "✅ Xcode проект создан"
-          ls -la *.xcodeproj
 
       - name: 🔧 Определение схемы
         id: scheme
@@ -51,13 +94,14 @@ jobs:
           cd VK-Z
           SCHEME=$(xcodebuild -list 2>&1 | grep -E "^\s+${SCHEME_NAME}" | head -1 | xargs)
           if [ -z "$SCHEME" ]; then
-            # Берём первую схему
             SCHEME=$(xcodebuild -list 2>&1 | grep -A 100 "Schemes:" | tail -n +2 | head -1 | xargs)
           fi
           echo "scheme=$SCHEME" >> $GITHUB_OUTPUT
           echo "Используем схему: $SCHEME"
+        env:
+          SCHEME_NAME: 'VKZ'
 
-      - name: 🏗 Сборка .app (Debug, без подписи)
+      - name: 🏗 Сборка .app
         run: |
           cd VK-Z
           xcodebuild build \
@@ -75,12 +119,10 @@ jobs:
             echo "❌ Сборка не удалась!"
             exit 1
           fi
-          echo "✅ Сборка завершена"
 
       - name: 📦 Упаковка в .ipa
         run: |
           cd VK-Z
-          # Находим .app
           APP_PATH=$(find build -name "*.app" -type d | head -1)
           echo "Найден .app: $APP_PATH"
           
@@ -89,44 +131,62 @@ jobs:
             exit 1
           fi
           
-          # Создаём Payload и упаковываем в .ipa
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
           zip -r "${{ env.IOS_IPA_NAME }}" Payload/
           rm -rf Payload
           
           echo "✅ .ipa создан: ${{ env.IOS_IPA_NAME }}"
-          ls -la "${{ env.IOS_IPA_NAME }}"
 
-      - name: 📤 Загрузка .ipa как артефакта
+      - name: 📤 Загрузка .ipa
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.IOS_IPA_NAME }}
           path: VK-Z/${{ env.IOS_IPA_NAME }}
           if-no-files-found: error
 
-      - name: 🏷 Создание релиза на GitHub
-        id: create_release
+  create-release:
+    name: 🏷 Создание релиза
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Скачать APK
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.APK_OUTPUT_NAME }}
+          path: release-artifacts
+
+      - name: 📥 Скачать IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.IOS_IPA_NAME }}
+          path: release-artifacts
+
+      - name: 📋 Список артефактов
+        run: ls -la release-artifacts/
+
+      - name: 🏷 Создание GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version_name }}-ios
-          name: '${{ env.APP_NAME }} ${{ github.event.inputs.version_name }} (iOS)'
+          tag_name: ${{ github.event.inputs.version_name }}
+          name: '${{ env.APP_NAME }} ${{ github.event.inputs.version_name }}'
           body: |
-            ## ${{ env.APP_NAME }} ${{ github.event.inputs.version_name }} (iOS)
+            ## ${{ env.APP_NAME }} ${{ github.event.inputs.version_name }}
 
             ${{ github.event.inputs.release_notes }}
 
-            > ⚠️ Сборка для симулятора (без подписи Apple Developer).
-            > Для установки на реальное устройство требуется сертификат разработчика Apple.
+            ### 📱 Платформы
+            - **Android** — Universal APK (все архитектуры)
+            - **iOS** — IPA для симулятора (без подписи)
 
             ---
             *Собрано: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}*
-          files: VK-Z/${{ env.IOS_IPA_NAME }}
+          files: release-artifacts/*
           prerelease: ${{ github.event.inputs.is_prerelease }}
           generate_release_notes: false
 
       - name: 📱 Отправка уведомления в Telegram
-        if: always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -135,7 +195,7 @@ jobs:
           NOTES="${{ github.event.inputs.release_notes }}"
           PRERELEASE="${{ github.event.inputs.is_prerelease }}"
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/$VERSION-ios"
+          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/$VERSION"
 
           if [ "$PRERELEASE" = "true" ]; then
             STATUS_ICON="🧪"
@@ -145,10 +205,14 @@ jobs:
             STATUS_TEXT="Stable"
           fi
 
-          MESSAGE="$STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT) 🍎 iOS
+          MESSAGE="$STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT)
           
           📝 <b>Что нового:</b>
           $NOTES
+          
+          📱 <b>Платформы:</b>
+          • Android — Universal APK
+          • iOS — IPA (симулятор)
           
           🔗 <a href=\"$RELEASE_URL\">Скачать релиз</a>
           ⚙ <a href=\"$RUN_URL\">Сборка #${{ github.run_number }}</a>"
