@@ -169,7 +169,7 @@ jobs:
         id: check_release
         run: |
           EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.TOKEN }}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.RELEASE_NAME }}")
           echo "exists=$EXISTS" >> $GITHUB_OUTPUT
           if [ "$EXISTS" = "200" ]; then
@@ -228,7 +228,7 @@ jobs:
             ./artifacts/windows/**/*
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   notify-telegram:
     name: Telegram Notification
