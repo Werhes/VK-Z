@@ -25,6 +25,25 @@ let package = Package(
                 "Kingfisher",
                 .product(name: "JWTDecode", package: "JWTDecode.swift")
             ],
+            path: ".",
+            exclude: [
+                "Package.swift",
+                "README.md",
+                "Resources/Info.plist",
+                "Resources/Assets.xcassets"
+            ],
+            sources: [
+                "VKZApp.swift",
+                "Models/VKMusicModels.swift",
+                "Services/AudioPlayerManager.swift",
+                "Services/VKApiService.swift",
+                "Views/MainTabView.swift",
+                "Views/Auth/VKAuthView.swift",
+                "Views/Mix/MixView.swift",
+                "Views/Player/PlayerView.swift",
+                "Views/Playlists/PlaylistsView.swift",
+                "Views/Search/SearchView.swift"
+            ],
             resources: [
                 .process("Resources")
             ]
