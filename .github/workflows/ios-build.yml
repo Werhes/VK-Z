@@ -1,261 +1,148 @@
-name: VK Z Build & Release
+name: 🍎 iOS Build & Release
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
     inputs:
-      namevers:
-        description: "Название релиза"
+      version_name:
+        description: 'Название версии (например, v1.2.0)'
         required: true
+        default: 'v1.0.0'
         type: string
-      descr:
-        description: "Описание релиза"
-        required: false
+      release_notes:
+        description: 'Описание релиза (что нового)'
+        required: true
+        default: 'Исправления и улучшения'
         type: string
-      release:
-        description: "Выложить в релиз?"
+      is_prerelease:
+        description: 'Pre-release (черновик)?'
+        required: true
+        default: true
         type: boolean
-        default: false
-      prerelease:
-        description: "Создать как prerelease?"
-        type: boolean
-        default: false
 
 env:
-  PROJECT_NAME: "VK Z"
-  RELEASE_NAME: ${{ github.event.inputs.namevers || github.ref_name }}
-  RELEASE_DESCRIPTION: ${{ github.event.inputs.descr || 'Automated build' }}
-  IS_RELEASE: ${{ github.event.inputs.release == 'true' || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-  IS_PRERELEASE: ${{ github.event.inputs.prerelease == 'true' || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+  APP_NAME: 'VK-Z'
+  SCHEME_NAME: 'VKZ'
+  XCODE_PROJECT: 'VK-Z/VKZ.xcodeproj'
+  IOS_APP_NAME: 'VK-Z-iOS.ipa'
 
 jobs:
-  ios-build:
-    name: iOS Build
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: macos-14
+  build-ios:
+    name: 🔨 iOS IPA
+    runs-on: macos-latest
+
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout репозитория
         uses: actions/checkout@v4
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+      - name: 🔍 Проверка Xcode
+        run: |
+          xcodebuild -version
+          xcode-select -p
 
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Show Swift version
-        run: swift --version
-
-      - name: Resolve Swift Package dependencies
+      - name: 📦 Создание Xcode проекта из Package.swift
         run: |
           cd VK-Z
-          swift package resolve
+          # Генерируем xcodeproj из Package.swift
+          swift package generate-xcodeproj
+          echo "Создан Xcode проект"
+          ls -la *.xcodeproj 2>/dev/null || echo "Нет xcodeproj"
 
-      - name: Install xcpretty
-        run: gem install xcpretty --no-document || echo "xcpretty not available, continuing without it"
-
-      - name: Build iOS project
+      - name: 🔧 Настройка схемы для сборки
         run: |
           cd VK-Z
-          set -o pipefail
-          xcodebuild build \
-            -scheme "VKZ" \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO | xcpretty
-
-      - name: Upload iOS build logs
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ios-build-logs
-          path: |
-            ~/Library/Logs/DiagnosticReports/
-            ~/Library/Developer/Xcode/DerivedData/**/Logs/
-          retention-days: 7
-
-  android-build:
-    name: Android Build
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: "17"
-          distribution: "temurin"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-disabled: true
-          gradle-home-cache-cleanup: false
-
-      - name: Build Android APK
-        run: |
-          cd android
-          chmod +x gradlew
-          export TERM=dumb
-          ./gradlew assembleDebug --no-daemon --no-configuration-cache --no-build-cache 2>&1
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: vkz-android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
-
-  windows-build:
-    name: Windows Build
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Restore NuGet packages
-        run: |
-          cd windows
-          dotnet restore
-
-      - name: Build Windows project
-        run: |
-          cd windows
-          dotnet publish VKZ/VKZ.csproj -c Release -o publish
-
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v4
-        with:
-          name: vkz-windows
-          path: windows/publish/
-          retention-days: 30
-
-  create-release:
-    name: Create Release
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true'
-    needs: [ios-build, android-build, windows-build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download Android APK
-        uses: actions/download-artifact@v4
-        with:
-          name: vkz-android-apk
-          path: ./artifacts
-
-      - name: Download Windows build
-        uses: actions/download-artifact@v4
-        with:
-          name: vkz-windows
-          path: ./artifacts/windows
-
-      - name: Check if release already exists
-        id: check_release
-        run: |
-          EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.RELEASE_NAME }}")
-          echo "exists=$EXISTS" >> $GITHUB_OUTPUT
-          if [ "$EXISTS" = "200" ]; then
-            echo "Release with tag ${{ env.RELEASE_NAME }} already exists!"
-          else
-            echo "No existing release found, will create new one."
+          # Создаём схему если её нет
+          xcodebuild -list 2>&1 || true
+          
+          # Пробуем найти схему
+          SCHEME=$(xcodebuild -list 2>&1 | grep -E "^[[:space:]]*${SCHEME_NAME}" | head -1 | xargs)
+          if [ -z "$SCHEME" ]; then
+            echo "Схема $SCHEME_NAME не найдена, создаём..."
+            # Создаём схему через xcodebuild
+            xcodebuild -project *.xcodeproj -scheme "$SCHEME_NAME" 2>&1 || true
           fi
+          echo "Доступные схемы:"
+          xcodebuild -list 2>&1 | grep -A 100 "Schemes:" || true
 
-      - name: Generate release body
-        id: release_body
-        if: steps.check_release.outputs.exists != '200'
+      - name: 🏗 Сборка iOS (Debug, без подписи)
         run: |
-          cat > release_body.md << 'EOF'
-          ## ${{ env.PROJECT_NAME }} ${{ env.RELEASE_NAME }}
+          cd VK-Z
+          # Собираем для симулятора (без подписи)
+          xcodebuild build \
+            -project *.xcodeproj \
+            -scheme "$SCHEME_NAME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build 2>&1 | tee build.log
+          
+          # Проверяем успешность
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ Сборка не удалась!"
+            exit 1
+          fi
+          echo "✅ Сборка завершена успешно"
 
-          ${{ env.RELEASE_DESCRIPTION }}
+      - name: 📤 Загрузка .app как артефакта
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-iOS.app
+          path: |
+            VK-Z/build/Debug-iphonesimulator/*.app
+          if-no-files-found: warn
 
-          ### Что нового:
-          - iOS плеер для VK Музыки (SwiftUI)
-          - Android плеер для VK Музыки (Kotlin + Jetpack Compose)
-          - Windows плеер для VK Музыки (C# WPF .NET 8)
-          - VK Микс — персональные подборки
-          - Поиск треков и плейлистов
-          - Фоновое воспроизведение
-          - AirPlay / Media3 поддержка
-
-          ### Файлы:
-          - `VK-Z/` — исходный код iOS (Xcode project)
-          - `android/` — исходный код Android (Gradle project)
-          - `windows/` — исходный код Windows (WPF .NET 8)
-          - `app-debug.apk` — Android APK для установки
-          - `windows/` — Windows сборка
-
-          ### Требования:
-          - iOS 17.0+ / Android 8.0+ / Windows 10+
-          - Аккаунт ВКонтакте
-
-          ---
-          **Разработчик:** [Werhes](https://github.com/Werhes)
-          EOF
-
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          cat release_body.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        if: steps.check_release.outputs.exists != '200'
+      - name: 🏷 Создание релиза на GitHub
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.RELEASE_NAME }}
-          name: ${{ env.PROJECT_NAME }} ${{ env.RELEASE_NAME }}
-          body: ${{ steps.release_body.outputs.body }}
-          prerelease: ${{ env.IS_PRERELEASE == 'true' }}
-          files: |
-            ./artifacts/app-debug.apk
-            ./artifacts/windows/**/*
-          generate_release_notes: true
+          tag_name: ${{ github.event.inputs.version_name }}-ios
+          name: '${{ env.APP_NAME }} ${{ github.event.inputs.version_name }} (iOS)'
+          body: |
+            ## ${{ env.APP_NAME }} ${{ github.event.inputs.version_name }} (iOS)
+
+            ${{ github.event.inputs.release_notes }}
+
+            > ⚠️ Сборка для симулятора (без подписи).
+            > Для установки на устройство требуется подпись через Apple Developer Program.
+
+            ---
+            *Собрано: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}*
+          prerelease: ${{ github.event.inputs.is_prerelease }}
+          generate_release_notes: false
+
+      - name: 📱 Отправка уведомления в Telegram
+        if: always()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          VERSION="${{ github.event.inputs.version_name }}"
+          NOTES="${{ github.event.inputs.release_notes }}"
+          PRERELEASE="${{ github.event.inputs.is_prerelease }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/$VERSION-ios"
 
-  notify-telegram:
-    name: Telegram Notification
-    if: github.event_name == 'workflow_dispatch' && always()
-    needs: [ios-build, android-build, windows-build, create-release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Telegram notification
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          format: html
-          message: |
-            <b>🎵 ${{ env.PROJECT_NAME }} — CI/CD Report</b>
+          if [ "$PRERELEASE" = "true" ]; then
+            STATUS_ICON="🧪"
+            STATUS_TEXT="Pre-release"
+          else
+            STATUS_ICON="✅"
+            STATUS_TEXT="Stable"
+          fi
 
-            <b>Branch:</b> <code>${{ github.ref_name }}</code>
-            <b>Commit:</b> <a href="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}">${{ github.sha }}</a>
-            <b>Author:</b> ${{ github.actor }}
-            <b>Version:</b> ${{ env.RELEASE_NAME }}
-            <b>Description:</b> ${{ env.RELEASE_DESCRIPTION }}
+          MESSAGE="$STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT) 🍎 iOS
+          
+          📝 <b>Что нового:</b>
+          $NOTES
+          
+          🔗 <a href=\"$RELEASE_URL\">Скачать релиз</a>
+          ⚙ <a href=\"$RUN_URL\">Сборка #${{ github.run_number }}</a>"
 
-            <b>iOS Build:</b> ${{ needs.ios-build.result == 'success' && '✅ Success' || needs.ios-build.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
-            <b>Android Build:</b> ${{ needs.android-build.result == 'success' && '✅ Success' || needs.android-build.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
-            <b>Windows Build:</b> ${{ needs.windows-build.result == 'success' && '✅ Success' || needs.windows-build.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
-            <b>Release:</b> ${{ needs.create-release.result == 'success' && '✅ Created' || needs.create-release.result == 'failure' && '❌ Failed' || '⏭️ Skipped' }}
-
-            ${{ github.event.head_commit.message && format('<b>Message:</b> {0}', github.event.head_commit.message) || '' }}
-
-            <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 Open Actions</a>
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=true" || echo "Telegram notification failed"
+        shell: bash

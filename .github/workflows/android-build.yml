@@ -1,0 +1,126 @@
+name: 🤖 Android Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Название версии (например, v1.2.0)'
+        required: true
+        default: 'v1.0.0'
+        type: string
+      release_notes:
+        description: 'Описание релиза (что нового)'
+        required: true
+        default: 'Исправления и улучшения'
+        type: string
+      is_prerelease:
+        description: 'Pre-release (черновик)?'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  APP_NAME: 'VK-Z'
+  APK_OUTPUT_NAME: 'VK-Z-Universal.apk'
+
+jobs:
+  build-android:
+    name: 🔨 Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout репозитория
+        uses: actions/checkout@v4
+
+      - name: ☕ Установка Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🏗 Установка Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 🔧 Кэширование Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 📦 Сборка Universal APK (Debug)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+        shell: bash
+
+      - name: 📋 Поиск APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find android/app/build/outputs -name "*.apk" -type f | head -1)
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Найден APK: $APK_PATH"
+
+      - name: 📤 Загрузка APK как артефакта
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_OUTPUT_NAME }}
+          path: ${{ steps.find_apk.outputs.APK_PATH }}
+          if-no-files-found: error
+
+      - name: 🏷 Создание релиза на GitHub
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version_name }}
+          name: '${{ env.APP_NAME }} ${{ github.event.inputs.version_name }}'
+          body: |
+            ## ${{ env.APP_NAME }} ${{ github.event.inputs.version_name }}
+
+            ${{ github.event.inputs.release_notes }}
+
+            ---
+            *Собрано: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}*
+          files: ${{ steps.find_apk.outputs.APK_PATH }}
+          prerelease: ${{ github.event.inputs.is_prerelease }}
+          generate_release_notes: false
+
+      - name: 📱 Отправка уведомления в Telegram
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          VERSION="${{ github.event.inputs.version_name }}"
+          NOTES="${{ github.event.inputs.release_notes }}"
+          PRERELEASE="${{ github.event.inputs.is_prerelease }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/$VERSION"
+
+          if [ "$PRERELEASE" = "true" ]; then
+            STATUS_ICON="🧪"
+            STATUS_TEXT="Pre-release"
+          else
+            STATUS_ICON="✅"
+            STATUS_TEXT="Stable"
+          fi
+
+          MESSAGE="$STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT) 📱 Android
+          
+          📝 <b>Что нового:</b>
+          $NOTES
+          
+          🔗 <a href=\"$RELEASE_URL\">Скачать релиз</a>
+          ⚙ <a href=\"$RUN_URL\">Сборка #${{ github.run_number }}</a>"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=true" || echo "Telegram notification failed"
+        shell: bash
