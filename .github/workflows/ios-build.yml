@@ -21,7 +21,6 @@ on:
 
 env:
   APP_NAME: 'VK-Z'
-  SCHEME_NAME: 'VKZ'
   IOS_IPA_NAME: 'VK-Z-iOS.ipa'
 
 jobs:
@@ -38,31 +37,12 @@ jobs:
           xcodebuild -version
           xcode-select -p
 
-      - name: 📦 Генерация Xcode проекта из Package.swift
-        run: |
-          cd VK-Z
-          swift package generate-xcodeproj
-          echo "✅ Xcode проект создан"
-          ls -la *.xcodeproj
-
-      - name: 🔧 Определение схемы
-        id: scheme
-        run: |
-          cd VK-Z
-          SCHEME=$(xcodebuild -list 2>&1 | grep -E "^\s+${SCHEME_NAME}" | head -1 | xargs)
-          if [ -z "$SCHEME" ]; then
-            # Берём первую схему
-            SCHEME=$(xcodebuild -list 2>&1 | grep -A 100 "Schemes:" | tail -n +2 | head -1 | xargs)
-          fi
-          echo "scheme=$SCHEME" >> $GITHUB_OUTPUT
-          echo "Используем схему: $SCHEME"
-
       - name: 🏗 Сборка .app (Debug, без подписи)
         run: |
           cd VK-Z
           xcodebuild build \
-            -project *.xcodeproj \
-            -scheme "${{ steps.scheme.outputs.scheme }}" \
+            -project VKZ.xcodeproj \
+            -scheme VKZ \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
@@ -80,7 +60,6 @@ jobs:
       - name: 📦 Упаковка в .ipa
         run: |
           cd VK-Z
-          # Находим .app
           APP_PATH=$(find build -name "*.app" -type d | head -1)
           echo "Найден .app: $APP_PATH"
           
@@ -89,7 +68,6 @@ jobs:
             exit 1
           fi
           
-          # Создаём Payload и упаковываем в .ipa
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
           zip -r "${{ env.IOS_IPA_NAME }}" Payload/

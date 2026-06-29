@@ -1,0 +1,251 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		VKZ_SOURCES /* VKZApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_APP; };
+		VKZ_MODELS /* VKMusicModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_MODELS_REF; };
+		VKZ_SERVICES_AUDIO /* AudioPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_SERVICES_AUDIO_REF; };
+		VKZ_SERVICES_API /* VKApiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_SERVICES_API_REF; };
+		VKZ_VIEWS_MAIN /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_MAIN_REF; };
+		VKZ_VIEWS_AUTH /* VKAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_AUTH_REF; };
+		VKZ_VIEWS_MIX /* MixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_MIX_REF; };
+		VKZ_VIEWS_PLAYER /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_PLAYER_REF; };
+		VKZ_VIEWS_PLAYLISTS /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_PLAYLISTS_REF; };
+		VKZ_VIEWS_SEARCH /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_SEARCH_REF; };
+		VKZ_RESOURCES /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = VKZ_RESOURCES_REF; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		VKZ_APP = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKZApp.swift; sourceTree = "<group>"; };
+		VKZ_MODELS_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKMusicModels.swift; sourceTree = "<group>"; };
+		VKZ_SERVICES_AUDIO_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerManager.swift; sourceTree = "<group>"; };
+		VKZ_SERVICES_API_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKApiService.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_MAIN_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_AUTH_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKAuthView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_MIX_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_PLAYER_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_PLAYLISTS_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_SEARCH_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		VKZ_RESOURCES_REF = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
+		VKZ_APP_DELEGATE = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKZApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		VKZ_ROOT_GROUP = {
+			isa = PBXGroup;
+			children = (
+				VKZ_APP,
+				VKZ_MODELS_GROUP,
+				VKZ_SERVICES_GROUP,
+				VKZ_VIEWS_GROUP,
+				VKZ_RESOURCES_REF,
+			);
+			path = "";
+			sourceTree = "<group>";
+		};
+		VKZ_MODELS_GROUP = {
+			isa = PBXGroup;
+			children = (VKZ_MODELS_REF,);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		VKZ_SERVICES_GROUP = {
+			isa = PBXGroup;
+			children = (VKZ_SERVICES_AUDIO_REF, VKZ_SERVICES_API_REF,);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		VKZ_VIEWS_GROUP = {
+			isa = PBXGroup;
+			children = (
+				VKZ_VIEWS_MAIN_REF,
+				VKZ_VIEWS_AUTH_REF,
+				VKZ_VIEWS_MIX_REF,
+				VKZ_VIEWS_PLAYER_REF,
+				VKZ_VIEWS_PLAYLISTS_REF,
+				VKZ_VIEWS_SEARCH_REF,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		VKZ_TARGET = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = VKZ_BUILD_CONFIG_LIST;
+			buildPhases = (
+				VKZ_SOURCES_PHASE,
+				VKZ_RESOURCES_PHASE,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VKZ;
+			productName = VKZ;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		VKZ_PROJECT = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = VKZ_PROJECT_BUILD_CONFIG_LIST;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = ru;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				ru,
+				Base,
+			);
+			mainGroup = VKZ_ROOT_GROUP;
+			productRefGroup = VKZ_ROOT_GROUP;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (VKZ_TARGET,);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		VKZ_RESOURCES_PHASE = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (VKZ_RESOURCES,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		VKZ_SOURCES_PHASE = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				VKZ_SOURCES,
+				VKZ_MODELS,
+				VKZ_SERVICES_AUDIO,
+				VKZ_SERVICES_API,
+				VKZ_VIEWS_MAIN,
+				VKZ_VIEWS_AUTH,
+				VKZ_VIEWS_MIX,
+				VKZ_VIEWS_PLAYER,
+				VKZ_VIEWS_PLAYLISTS,
+				VKZ_VIEWS_SEARCH,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		VKZ_DEBUG_CONFIG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.werhes.vkz;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		VKZ_RELEASE_CONFIG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.werhes.vkz;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		VKZ_PROJECT_DEBUG_CONFIG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1 $(inherited)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		VKZ_PROJECT_RELEASE_CONFIG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		VKZ_BUILD_CONFIG_LIST = {
+			isa = XCConfigurationList;
+			buildConfigurations = (VKZ_DEBUG_CONFIG, VKZ_RELEASE_CONFIG,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		VKZ_PROJECT_BUILD_CONFIG_LIST = {
+			isa = XCConfigurationList;
+			buildConfigurations = (VKZ_PROJECT_DEBUG_CONFIG, VKZ_PROJECT_RELEASE_CONFIG,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = VKZ_PROJECT;
+}
