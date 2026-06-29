@@ -1,5 +1,6 @@
 package com.werhes.vkz.ui.screens.playlists
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -13,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,6 +25,7 @@ import com.werhes.vkz.data.model.VKPlaylist
 import com.werhes.vkz.data.model.VKTrack
 import com.werhes.vkz.data.repository.MusicRepository
 import com.werhes.vkz.player.PlayerManager
+import com.werhes.vkz.ui.theme.VKColors
 import kotlinx.coroutines.launch
 
 @Composable
@@ -52,6 +56,7 @@ fun PlaylistsScreen() {
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item {
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Моя музыка",
                 fontSize = 34.sp,
@@ -62,7 +67,7 @@ fun PlaylistsScreen() {
             Text(
                 text = "${recentTracks.size} треков",
                 fontSize = 15.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = VKColors.textSecondary,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
         }
@@ -117,7 +122,7 @@ fun PlaylistsScreen() {
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.height((playlists.size / 2 + 1) * 240.dp)
+                        modifier = Modifier.height((playlists.size / 2 + 1) * 260.dp)
                     ) {
                         items(playlists.take(6)) { playlist ->
                             PlaylistCard(playlist = playlist)
@@ -151,7 +156,7 @@ fun SectionHeader(title: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -162,7 +167,11 @@ fun SectionHeader(title: String) {
             color = MaterialTheme.colorScheme.onBackground
         )
         TextButton(onClick = { }) {
-            Text("Все", color = MaterialTheme.colorScheme.primary)
+            Text(
+                "Все",
+                color = VKColors.accentBlue,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -171,31 +180,51 @@ fun SectionHeader(title: String) {
 fun TrackCard(track: VKTrack) {
     Card(
         onClick = { PlayerManager.setQueue(listOf(track)) },
-        modifier = Modifier.width(150.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier.width(160.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = VKColors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
-            AsyncImage(
-                model = track.coverUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
-                contentScale = ContentScale.Crop
-            )
-            Column(modifier = Modifier.padding(8.dp)) {
+            Box {
+                AsyncImage(
+                    model = track.coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                // Gradient overlay at bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    VKColors.surface.copy(alpha = 0.9f)
+                                )
+                            )
+                        )
+                )
+            }
+            Column(modifier = Modifier.padding(10.dp)) {
                 Text(
                     text = track.title,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = track.artist,
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = VKColors.textSecondary,
                     maxLines = 1
                 )
             }
@@ -207,30 +236,50 @@ fun TrackCard(track: VKTrack) {
 fun PlaylistCard(playlist: VKPlaylist) {
     Card(
         onClick = { },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = VKColors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
-            AsyncImage(
-                model = playlist.coverUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(170.dp)
-                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
-                contentScale = ContentScale.Crop
-            )
-            Column(modifier = Modifier.padding(8.dp)) {
+            Box {
+                AsyncImage(
+                    model = playlist.coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(170.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                // Gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    VKColors.surface.copy(alpha = 0.9f)
+                                )
+                            )
+                        )
+                )
+            }
+            Column(modifier = Modifier.padding(10.dp)) {
                 Text(
                     text = playlist.title,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${playlist.trackCount} треков",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = VKColors.textSecondary
                 )
             }
         }
@@ -247,8 +296,8 @@ fun ShimmerTrackRow() {
         Box(
             modifier = Modifier
                 .size(60.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clip(RoundedCornerShape(12.dp))
+                .background(VKColors.cardBackground)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column {
@@ -257,7 +306,7 @@ fun ShimmerTrackRow() {
                     .width(150.dp)
                     .height(14.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(VKColors.cardBackground)
             )
             Spacer(modifier = Modifier.height(6.dp))
             Box(
@@ -265,10 +314,8 @@ fun ShimmerTrackRow() {
                     .width(100.dp)
                     .height(12.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(VKColors.cardBackground)
             )
         }
     }
 }
-
-import androidx.compose.foundation.background

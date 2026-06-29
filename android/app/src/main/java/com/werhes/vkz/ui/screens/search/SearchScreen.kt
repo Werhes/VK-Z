@@ -1,5 +1,6 @@
 package com.werhes.vkz.ui.screens.search
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,6 +22,7 @@ import coil.compose.AsyncImage
 import com.werhes.vkz.data.model.VKTrack
 import com.werhes.vkz.data.repository.MusicRepository
 import com.werhes.vkz.player.PlayerManager
+import com.werhes.vkz.ui.theme.VKColors
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,24 +67,36 @@ fun SearchScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            placeholder = { Text("Поиск треков, альбомов...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            placeholder = { Text("Поиск треков, альбомов...", color = VKColors.textTertiary) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = VKColors.textSecondary
+                )
+            },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = {
                         searchQuery = ""
                         searchResults = emptyList()
                     }) {
-                        Icon(Icons.Default.Clear, contentDescription = null)
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = null,
+                            tint = VKColors.textSecondary
+                        )
                     }
                 }
             },
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedContainerColor = VKColors.surface,
+                unfocusedContainerColor = VKColors.surface,
+                focusedBorderColor = VKColors.accentBlue,
+                unfocusedBorderColor = VKColors.surface
             ),
             singleLine = true
         )
@@ -100,33 +115,45 @@ fun SearchScreen() {
                 }
 
                 item {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 16.dp)
                     ) {
-                        genres.take(5).forEach { genre ->
-                            FilterChip(
-                                selected = false,
-                                onClick = { searchQuery = genre },
-                                label = { Text(genre, fontSize = 13.sp) }
-                            )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            genres.take(5).forEach { genre ->
+                                FilterChip(
+                                    selected = false,
+                                    onClick = { searchQuery = genre },
+                                    label = { Text(genre, fontSize = 13.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        containerColor = VKColors.cardBackground,
+                                        labelColor = VKColors.textSecondary
+                                    ),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                            }
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        genres.drop(5).forEach { genre ->
-                            FilterChip(
-                                selected = false,
-                                onClick = { searchQuery = genre },
-                                label = { Text(genre, fontSize = 13.sp) }
-                            )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            genres.drop(5).forEach { genre ->
+                                FilterChip(
+                                    selected = false,
+                                    onClick = { searchQuery = genre },
+                                    label = { Text(genre, fontSize = 13.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        containerColor = VKColors.cardBackground,
+                                        labelColor = VKColors.textSecondary
+                                    ),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -160,15 +187,21 @@ fun SearchScreen() {
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
+                                    text = "🔍",
+                                    fontSize = 48.sp
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
                                     text = "Ничего не найдено",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = VKColors.textSecondary
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Попробуйте изменить запрос",
                                     fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    color = VKColors.textTertiary
                                 )
                             }
                         }
@@ -199,7 +232,9 @@ fun TrackRow(track: VKTrack) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = VKColors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -209,8 +244,8 @@ fun TrackRow(track: VKTrack) {
                 model = track.coverUrl,
                 contentDescription = null,
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -218,21 +253,22 @@ fun TrackRow(track: VKTrack) {
                 Text(
                     text = track.title,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = track.artist,
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = VKColors.textSecondary,
                     maxLines = 1
                 )
             }
             Text(
                 text = track.formattedDuration,
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = VKColors.textTertiary
             )
         }
     }
@@ -247,9 +283,9 @@ fun ShimmerTrackRow() {
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .size(48.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(VKColors.cardBackground)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -258,7 +294,7 @@ fun ShimmerTrackRow() {
                     .fillMaxWidth(0.6f)
                     .height(12.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(VKColors.cardBackground)
             )
             Spacer(modifier = Modifier.height(6.dp))
             Box(
@@ -266,10 +302,8 @@ fun ShimmerTrackRow() {
                     .fillMaxWidth(0.4f)
                     .height(10.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(VKColors.cardBackground)
             )
         }
     }
 }
-
-import androidx.compose.foundation.background

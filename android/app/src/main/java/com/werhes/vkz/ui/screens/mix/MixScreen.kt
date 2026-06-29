@@ -1,5 +1,6 @@
 package com.werhes.vkz.ui.screens.mix
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +22,7 @@ import com.werhes.vkz.data.model.VKMix
 import com.werhes.vkz.data.model.VKTrack
 import com.werhes.vkz.data.repository.MusicRepository
 import com.werhes.vkz.player.PlayerManager
+import com.werhes.vkz.ui.theme.VKColors
 import kotlinx.coroutines.launch
 
 @Composable
@@ -42,6 +44,7 @@ fun MixScreen() {
         contentPadding = PaddingValues(16.dp)
     ) {
         item {
+            Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "VK Микс",
@@ -53,8 +56,8 @@ fun MixScreen() {
             Text(
                 text = "Персональные подборки на основе ваших треков",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                color = VKColors.textSecondary,
+                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
         }
 
@@ -70,6 +73,12 @@ fun MixScreen() {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
+                            text = "♪",
+                            fontSize = 60.sp,
+                            color = VKColors.textTertiary.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
                             text = "Миксы скоро появятся",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -79,7 +88,7 @@ fun MixScreen() {
                         Text(
                             text = "Слушайте музыку, чтобы мы могли\nсоздавать для вас персональные подборки",
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = VKColors.textSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -100,7 +109,9 @@ fun MixCard(mix: VKMix) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = VKColors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -108,7 +119,7 @@ fun MixCard(mix: VKMix) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(110.dp)
                     .clip(RoundedCornerShape(16.dp))
             ) {
                 AsyncImage(
@@ -116,6 +127,19 @@ fun MixCard(mix: VKMix) {
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
+                )
+                // Subtle gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.3f)
+                                )
+                            )
+                        )
                 )
             }
 
@@ -130,18 +154,20 @@ fun MixCard(mix: VKMix) {
                     maxLines = 2
                 )
                 if (mix.subtitle != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = mix.subtitle,
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = VKColors.textSecondary,
                         maxLines = 1
                     )
                 }
                 if (mix.trackCount != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${mix.trackCount} треков",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = VKColors.textTertiary
                     )
                 }
             }
@@ -155,14 +181,15 @@ fun ShimmerMixCard() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = VKColors.surface)
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(110.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(VKColors.cardBackground)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -171,7 +198,7 @@ fun ShimmerMixCard() {
                         .fillMaxWidth(0.7f)
                         .height(16.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(VKColors.cardBackground)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(
@@ -179,11 +206,9 @@ fun ShimmerMixCard() {
                         .fillMaxWidth(0.5f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(VKColors.cardBackground)
                 )
             }
         }
     }
 }
-
-import androidx.compose.foundation.background

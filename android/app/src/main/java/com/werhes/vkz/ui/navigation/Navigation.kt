@@ -1,25 +1,38 @@
 package com.werhes.vkz.ui.navigation
 
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
+import com.werhes.vkz.data.model.PlayerState
 import com.werhes.vkz.player.PlayerManager
 import com.werhes.vkz.ui.screens.auth.AuthScreen
 import com.werhes.vkz.ui.screens.mix.MixScreen
 import com.werhes.vkz.ui.screens.player.PlayerScreen
 import com.werhes.vkz.ui.screens.playlists.PlaylistsScreen
 import com.werhes.vkz.ui.screens.search.SearchScreen
+import com.werhes.vkz.ui.theme.VKColors
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     data object Playlists : Screen("playlists", "Моя музыка", Icons.Outlined.QueueMusic, Icons.Filled.QueueMusic)
@@ -64,7 +77,8 @@ fun MainNavigation(isAuthenticated: Boolean) {
                 }
 
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = VKColors.background,
+                    tonalElevation = 0.dp
                 ) {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
@@ -75,10 +89,18 @@ fun MainNavigation(isAuthenticated: Boolean) {
                             icon = {
                                 Icon(
                                     imageVector = if (selected) screen.selectedIcon else screen.icon,
-                                    contentDescription = screen.title
+                                    contentDescription = screen.title,
+                                    tint = if (selected) VKColors.accentBlue else VKColors.textTertiary
                                 )
                             },
-                            label = { Text(screen.title, style = MaterialTheme.typography.labelSmall) },
+                            label = {
+                                Text(
+                                    screen.title,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (selected) VKColors.accentBlue else VKColors.textTertiary,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            },
                             selected = selected,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -86,7 +108,10 @@ fun MainNavigation(isAuthenticated: Boolean) {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                indicatorColor = VKColors.accentBlue.copy(alpha = 0.12f)
+                            )
                         )
                     }
                 }
@@ -113,12 +138,15 @@ fun MiniPlayerBar(onClick: () -> Unit) {
 
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = VKColors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        // Mini player content
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Cover
@@ -127,7 +155,7 @@ fun MiniPlayerBar(onClick: () -> Unit) {
                 contentDescription = null,
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop
             )
 
@@ -137,42 +165,48 @@ fun MiniPlayerBar(onClick: () -> Unit) {
                 Text(
                     text = currentTrack?.title ?: "",
                     style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
                 Text(
                     text = currentTrack?.artist ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = VKColors.textSecondary,
                     maxLines = 1
                 )
             }
 
-            IconButton(onClick = { PlayerManager.togglePlayPause() }) {
+            IconButton(
+                onClick = { PlayerManager.togglePlayPause() },
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(VKColors.accentBlue, VKColors.accentPurple)
+                        )
+                    )
+            ) {
                 Icon(
-                    imageVector = if (playerState == com.werhes.vkz.data.model.PlayerState.PLAYING)
+                    imageVector = if (playerState == PlayerState.PLAYING)
                         Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.width(4.dp))
 
             IconButton(onClick = { PlayerManager.nextTrack() }) {
                 Icon(
                     imageVector = Icons.Filled.SkipNext,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
     }
 }
-
-// Required imports for MiniPlayerBar
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage

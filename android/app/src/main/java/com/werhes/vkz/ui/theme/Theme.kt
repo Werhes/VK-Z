@@ -1,29 +1,89 @@
 package com.werhes.vkz.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
-val VkBackground = Color(0xFF0D0F1F)
-val VkCardBackground = Color(0xFF1A1F33)
-val VkSurface = Color(0xFF262E47)
-val VkAccentBlue = Color(0xFF3F7AFF)
-val VkAccentPurple = Color(0xFF7C4DFF)
-val VkTextPrimary = Color.White
-val VkTextSecondary = Color(0xFF9E9E9E)
+// MARK: - Colors
+object VKColors {
+    // Backgrounds
+    val background = Color(0xFF0A0C1A)
+    val surface = Color(0xFF141829)
+    val surfaceLight = Color(0xFF1E263D)
+    val cardBackground = Color(0xFF1A1F33)
+    val elevatedBackground = Color(0xFF242B45)
+
+    // Accent
+    val accentBlue = Color(0xFF3F85FF)
+    val accentBlueLight = Color(0xFF5A9EFF)
+    val accentPurple = Color(0xFF8C5AFF)
+    val accentPink = Color(0xFFFF5AA6)
+    val accentGreen = Color(0xFF33D97A)
+    val accentOrange = Color(0xFFFF9933)
+
+    // Text
+    val textPrimary = Color.White
+    val textSecondary = Color(0xFF8E94A6)
+    val textTertiary = Color(0xFF5A5F72)
+
+    // Gradients
+    val primaryGradient = Brush.linearGradient(
+        colors = listOf(accentBlue, accentPurple),
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset.Infinite
+    )
+
+    val warmGradient = Brush.linearGradient(
+        colors = listOf(accentOrange, accentPink),
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset.Infinite
+    )
+
+    val coolGradient = Brush.linearGradient(
+        colors = listOf(accentBlue, accentGreen),
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset.Infinite
+    )
+
+    val authGradient = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF2E354A),
+            Color(0xFF0A0C1A)
+        )
+    )
+
+    val glassGradient = Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.08f),
+            Color.White.copy(alpha = 0.02f)
+        )
+    )
+}
+
+// MARK: - Custom Shapes
+object VKShapes {
+    val small = RoundedCornerShape(8.dp)
+    val medium = RoundedCornerShape(12.dp)
+    val large = RoundedCornerShape(16.dp)
+    val extraLarge = RoundedCornerShape(20.dp)
+}
 
 private val DarkColorScheme = darkColorScheme(
-    primary = VkAccentBlue,
-    secondary = VkAccentPurple,
-    background = VkBackground,
-    surface = VkCardBackground,
-    surfaceVariant = VkSurface,
+    primary = VKColors.accentBlue,
+    secondary = VKColors.accentPurple,
+    tertiary = VKColors.accentPink,
+    background = VKColors.background,
+    surface = VKColors.surface,
+    surfaceVariant = VKColors.cardBackground,
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = VkTextPrimary,
-    onSurface = VkTextPrimary,
-    onSurfaceVariant = VkTextSecondary
+    onBackground = VKColors.textPrimary,
+    onSurface = VKColors.textPrimary,
+    onSurfaceVariant = VKColors.textSecondary,
+    outline = VKColors.textTertiary
 )
 
 @Composable
@@ -31,6 +91,7 @@ fun VKZTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = DarkColorScheme,
         typography = Typography(),
+        shapes = VKShapes,
         content = content
     )
 }
