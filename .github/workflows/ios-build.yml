@@ -46,6 +46,7 @@ jobs:
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ./DerivedData \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -60,8 +61,14 @@ jobs:
       - name: 📦 Упаковка в .ipa
         run: |
           cd VK-Z
-          APP_PATH=$(find build -name "*.app" -type d | head -1)
+          APP_PATH=$(find DerivedData -name "*.app" -type d | head -1)
           echo "Найден .app: $APP_PATH"
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ .app не найден в DerivedData! Ищем в build/..."
+            APP_PATH=$(find build -name "*.app" -type d | head -1)
+            echo "Найден .app: $APP_PATH"
+          fi
           
           if [ -z "$APP_PATH" ]; then
             echo "❌ .app не найден!"
