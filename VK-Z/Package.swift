@@ -4,7 +4,8 @@ import PackageDescription
 let package = Package(
     name: "VKZ",
     platforms: [
-        .iOS(.v17)
+        .iOS(.v17),
+        .macOS(.v11)
     ],
     products: [
         .library(
