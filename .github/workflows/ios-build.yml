@@ -37,20 +37,14 @@ jobs:
           xcodebuild -version
           xcode-select -p
 
-      - name: 🏗 Сборка .app (Debug, без подписи)
+      - name: 🏗 Сборка .app через SPM
         run: |
           cd VK-Z
-          xcodebuild build \
-            -project VKZ.xcodeproj \
-            -scheme VKZ \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath ./DerivedData \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            clean build 2>&1 | tee build.log
+          swift build \
+            -c debug \
+            -Xswiftc "-sdk" -Xswiftc "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
+            -Xswiftc "-target" -Xswiftc "x86_64-apple-ios17.0-simulator" \
+            2>&1 | tee build.log
           
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
             echo "❌ Сборка не удалась!"
@@ -61,14 +55,8 @@ jobs:
       - name: 📦 Упаковка в .ipa
         run: |
           cd VK-Z
-          APP_PATH=$(find DerivedData -name "*.app" -type d | head -1)
+          APP_PATH=$(find .build -name "*.app" -type d | head -1)
           echo "Найден .app: $APP_PATH"
-          
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ .app не найден в DerivedData! Ищем в build/..."
-            APP_PATH=$(find build -name "*.app" -type d | head -1)
-            echo "Найден .app: $APP_PATH"
-          fi
           
           if [ -z "$APP_PATH" ]; then
             echo "❌ .app не найден!"

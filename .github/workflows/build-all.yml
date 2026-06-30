@@ -57,7 +57,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon -Dorg.gradle.internal.launcher.welcomeMessageEnabled=false
         shell: bash
 
       - name: 📋 Поиск APK
@@ -82,20 +82,14 @@ jobs:
       - name: 📥 Checkout репозитория
         uses: actions/checkout@v4
 
-      - name: 🏗 Сборка .app
+      - name: 🏗 Сборка .app через SPM
         run: |
           cd VK-Z
-          xcodebuild build \
-            -project VKZ.xcodeproj \
-            -scheme VKZ \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath ./DerivedData \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            clean build 2>&1 | tee build.log
+          swift build \
+            -c debug \
+            -Xswiftc "-sdk" -Xswiftc "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
+            -Xswiftc "-target" -Xswiftc "x86_64-apple-ios17.0-simulator" \
+            2>&1 | tee build.log
           
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
             echo "❌ Сборка не удалась!"
@@ -106,14 +100,8 @@ jobs:
       - name: 📦 Упаковка в .ipa
         run: |
           cd VK-Z
-          APP_PATH=$(find DerivedData -name "*.app" -type d | head -1)
+          APP_PATH=$(find .build -name "*.app" -type d | head -1)
           echo "Найден .app: $APP_PATH"
-          
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ .app не найден! Ищем в build/..."
-            APP_PATH=$(find build -name "*.app" -type d | head -1)
-            echo "Найден .app: $APP_PATH"
-          fi
           
           if [ -z "$APP_PATH" ]; then
             echo "❌ .app не найден!"
@@ -195,7 +183,8 @@ jobs:
             STATUS_TEXT="Stable"
           fi
 
-          MESSAGE="$STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT)
+          MESSAGE=$(cat <<-ENDMSG
+          $STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT)
           
           📝 <b>Что нового:</b>
           $NOTES
@@ -204,8 +193,10 @@ jobs:
           • Android — Universal APK
           • iOS — IPA (Alpha версия)
           
-          🔗 <a href=\"$RELEASE_URL\">Скачать релиз</a>
-          ⚙ <a href=\"$RUN_URL\">Сборка #${{ github.run_number }}</a>"
+          🔗 <a href="$RELEASE_URL">Скачать релиз</a>
+          ⚙ <a href="$RUN_URL">Сборка #${{ github.run_number }}</a>
+          ENDMSG
+          )
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \

@@ -56,7 +56,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon -Dorg.gradle.internal.launcher.welcomeMessageEnabled=false
         shell: bash
 
       - name: 📋 Поиск APK
