@@ -22,7 +22,6 @@ on:
 env:
   APP_NAME: 'VK-Z'
   APK_OUTPUT_NAME: 'VK-Z-Universal.apk'
-  GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=512m"'
 
 jobs:
   build-android:

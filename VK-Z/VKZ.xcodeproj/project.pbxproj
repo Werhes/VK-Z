@@ -26,11 +26,11 @@
 		VKZ_SERVICES_AUDIO_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerManager.swift; sourceTree = "<group>"; };
 		VKZ_SERVICES_API_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKApiService.swift; sourceTree = "<group>"; };
 		VKZ_VIEWS_MAIN_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		VKZ_VIEWS_AUTH_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Auth/VKAuthView.swift; sourceTree = "<group>"; };
-		VKZ_VIEWS_MIX_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mix/MixView.swift; sourceTree = "<group>"; };
-		VKZ_VIEWS_PLAYER_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player/PlayerView.swift; sourceTree = "<group>"; };
-		VKZ_VIEWS_PLAYLISTS_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playlists/PlaylistsView.swift; sourceTree = "<group>"; };
-		VKZ_VIEWS_SEARCH_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search/SearchView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_AUTH_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKAuthView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_MIX_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_PLAYER_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_PLAYLISTS_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
+		VKZ_VIEWS_SEARCH_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		VKZ_RESOURCES_REF = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
 		VKZ_APP_DELEGATE = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKZApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
