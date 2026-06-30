@@ -176,6 +176,7 @@ jobs:
           generate_release_notes: false
 
       - name: 📱 Отправка уведомления в Telegram
+        if: always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -201,7 +202,7 @@ jobs:
           
           📱 <b>Платформы:</b>
           • Android — Universal APK
-          • iOS — IPA (симулятор)
+          • iOS — IPA (Alpha версия)
           
           🔗 <a href=\"$RELEASE_URL\">Скачать релиз</a>
           ⚙ <a href=\"$RUN_URL\">Сборка #${{ github.run_number }}</a>"
