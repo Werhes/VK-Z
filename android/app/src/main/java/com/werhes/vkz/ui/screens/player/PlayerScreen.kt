@@ -193,11 +193,7 @@ fun PlayerScreen() {
                             contentColor = VKColors.accentPurple
                         ),
                         shape = RoundedCornerShape(10.dp),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = Brush.linearGradient(
-                                colors = listOf(VKColors.accentPurple, VKColors.accentPink)
-                            )
-                        )
+                        border = ButtonDefaults.outlinedButtonBorder
                     ) {
                         Icon(
                             Icons.Default.Waves,
