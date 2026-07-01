@@ -43,12 +43,6 @@
 - **Зависимости**: Retrofit, OkHttp, Coil, Accompanist WebView
 - **Сборка**: Android Studio Hedgehog+
 
-### Windows
-- **Язык**: C# 12
-- **Фреймворк**: WPF (.NET 8)
-- **Минимальная версия**: Windows 10 / Windows 11
-- **Зависимости**: VkNet 1.68.0, VkNet.AudioBypassService 1.7.2, NAudio 2.2.1, Newtonsoft.Json 13.0.3
-- **Сборка**: Visual Studio 2022 / .NET SDK 8.0
 
 ## Сборка
 
@@ -69,13 +63,6 @@ cd android
 ./gradlew assembleDebug
 ```
 
-### Windows
-
-```bash
-cd windows
-dotnet restore VKZ/VKZ.csproj
-dotnet build VKZ/VKZ.csproj -c Release
-```
 
 ## CI/CD
 
@@ -83,7 +70,6 @@ dotnet build VKZ/VKZ.csproj -c Release
 
 - **iOS** — macOS runner, сборка через xcodebuild
 - **Android** — ubuntu runner, сборка через Gradle
-- **Windows** — windows-latest runner, сборка через dotnet
 
 ### Запуск вручную
 
@@ -110,14 +96,6 @@ VK-Z/
 │       ├── data/model/      # Модели данных
 │       ├── ui/screens/      # Экраны (Auth, Player, Search, Playlists, Mix)
 │       └── ui/theme/        # Тёмная тема
-├── windows/                 # Windows приложение (C# WPF)
-│   └── VKZ/
-│       ├── Services/        # VKApiService, AudioPlayerService
-│       ├── Views/           # AuthView, PlaylistsView, SearchView, MixView, PopularView
-│       ├── Models/          # Модели данных
-│       ├── Themes/          # Colors.xaml, Styles.xaml
-│       └── Converters/      # WPF конвертеры
-└── .github/workflows/       # CI/CD pipelines
 ```
 
 ## Технические детали
@@ -125,13 +103,11 @@ VK-Z/
 ### VK API
 - Используется VK API версии 5.199
 - На iOS/Android — прямые HTTP-запросы к `api.vk.com/method/`
-- На Windows — библиотека VkNet с AudioBypassService
 - Аутентификация через OAuth 2.0 (Implicit Flow) или `auth.login` с `client_secret`
 
 ### Аудио плеер
 - **iOS**: AVAudioPlayer + AVPlayer
 - **Android**: MediaPlayer (ExoPlayer)
-- **Windows**: NAudio с MediaFoundationReader (поддержка MP3, OGG)
 
 ### Дизайн
 - Тёмная тема: `#1A1B1E` фон, `#0077FF` акцент, `#232529` поверхности
