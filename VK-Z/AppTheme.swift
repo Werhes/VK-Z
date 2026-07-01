@@ -61,12 +61,29 @@ enum AppColors {
 }
 
 // MARK: - App Shadows
+struct AppShadow {
+    let color: Color
+    let radius: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+    
+    func apply(to view: some View) -> some View {
+        view.shadow(color: color, radius: radius, x: x, y: y)
+    }
+}
+
 enum AppShadows {
-    static let small = Shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
-    static let medium = Shadow(color: .black.opacity(0.4), radius: 16, x: 0, y: 8)
-    static let large = Shadow(color: .black.opacity(0.5), radius: 24, x: 0, y: 12)
-    static let glow = Shadow(color: AppColors.accentBlue.opacity(0.3), radius: 20, x: 0, y: 0)
-    static let purpleGlow = Shadow(color: AppColors.accentPurple.opacity(0.3), radius: 20, x: 0, y: 0)
+    static let small = AppShadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+    static let medium = AppShadow(color: .black.opacity(0.4), radius: 16, x: 0, y: 8)
+    static let large = AppShadow(color: .black.opacity(0.5), radius: 24, x: 0, y: 12)
+    static let glow = AppShadow(color: AppColors.accentBlue.opacity(0.3), radius: 20, x: 0, y: 0)
+    static let purpleGlow = AppShadow(color: AppColors.accentPurple.opacity(0.3), radius: 20, x: 0, y: 0)
+}
+
+extension View {
+    func appShadow(_ shadow: AppShadow) -> some View {
+        self.shadow(color: shadow.color, radius: shadow.radius, x: shadow.x, y: shadow.y)
+    }
 }
 
 // MARK: - Glass Effect
