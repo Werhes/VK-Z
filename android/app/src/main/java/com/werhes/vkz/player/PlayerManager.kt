@@ -107,8 +107,8 @@ object PlayerManager {
         val q = _queue.value
         if (q.isEmpty()) return
 
-        val idx = if (_isShuffled.value) (0 until q.count).random()
-        else (_currentIndex.value + 1) % q.count
+        val idx = if (_isShuffled.value) (0 until q.size).random()
+        else (_currentIndex.value + 1) % q.size
 
         _currentIndex.value = idx
         playTrack(q[idx])
@@ -123,7 +123,7 @@ object PlayerManager {
             return
         }
 
-        val idx = (_currentIndex.value - 1 + q.count) % q.count
+        val idx = (_currentIndex.value - 1 + q.size) % q.size
         _currentIndex.value = idx
         playTrack(q[idx])
     }

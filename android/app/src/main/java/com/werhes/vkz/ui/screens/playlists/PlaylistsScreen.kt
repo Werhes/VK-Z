@@ -122,7 +122,7 @@ fun PlaylistsScreen() {
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.height((playlists.size / 2 + 1) * 260.dp)
+                        modifier = Modifier.height(((playlists.size / 2 + 1) * 260).dp)
                     ) {
                         items(playlists.take(6)) { playlist ->
                             PlaylistCard(playlist = playlist)
