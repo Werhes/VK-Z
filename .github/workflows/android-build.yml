@@ -56,7 +56,10 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          GRADLE_OPTS="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false" ./gradlew assembleDebug --no-daemon
+          # Разрешаем core dumps для Gradle (проблема на GitHub Actions)
+          ulimit -c unlimited || true
+          export GRADLE_OPTS="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Dorg.gradle.jvmargs=-Xmx2048m"
+          ./gradlew assembleDebug --no-daemon
         shell: bash
 
       - name: 📋 Поиск APK
