@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Название версии (например, 1.0.0)'
+        description: 'Название версии'
+        required: true
+        default: 'Новый релиз'
+      version_code:
+        description: 'Версия №'
         required: true
         default: '1.0.0'
-      version_code:
-        description: 'Код версии (число)'
-        required: true
-        default: '1'
       release_notes:
         description: 'Описание релиза'
         required: false
-        default: ''
+        default: '-Пофиксил биги -Улучшена производительность'
       release_type:
         description: 'Тип релиза'
         required: true
@@ -24,12 +24,12 @@ on:
           - release
           - prerelease
       build_android:
-        description: 'Собирать Android'
+        description: 'Собрать APK?'
         required: true
         default: true
         type: boolean
       build_ios:
-        description: 'Собирать iOS'
+        description: 'Собрать IPA?'
         required: true
         default: true
         type: boolean
@@ -72,6 +72,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Install Xamarin Android workload
+        run: dotnet workload install android maui 2>/dev/null || true
 
       - name: Restore NuGet packages
         run: dotnet restore Werhes.Vkz.sln
@@ -154,6 +157,40 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Install Xamarin iOS workload
+        run: |
+          dotnet workload install ios maui 2>/dev/null || true
+          echo "Xamarin.iOS workload installed"
+
+      - name: Find msbuild path
+        id: find_msbuild
+        shell: pwsh
+        run: |
+          $possiblePaths = @(
+            "/Library/Frameworks/Mono.framework/Versions/Current/Commands/msbuild",
+            "/usr/local/bin/msbuild",
+            "/usr/bin/msbuild"
+          )
+          $found = $false
+          foreach ($p in $possiblePaths) {
+            if (Test-Path $p) {
+              echo "msbuild_path=$p" >> $env:GITHUB_OUTPUT
+              echo "Found msbuild at: $p"
+              $found = $true
+              break
+            }
+          }
+          if (-not $found) {
+            $whichMsbuild = $(which msbuild 2>/dev/null)
+            if ($whichMsbuild) {
+              echo "msbuild_path=$whichMsbuild" >> $env:GITHUB_OUTPUT
+              $found = $true
+            }
+          }
+          if (-not $found) {
+            echo "msbuild_path=msbuild" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Restore NuGet packages
         run: dotnet restore Werhes.Vkz.sln
 
@@ -171,7 +208,12 @@ jobs:
           echo "release_type=$releaseType" >> $env:GITHUB_OUTPUT
 
       - name: Build iOS project
-        run: msbuild Werhes.Vkz.iOS/Werhes.Vkz.iOS.csproj /p:Configuration=${{ env.CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ steps.version.outputs.version_name }} /p:VersionCode=${{ steps.version.outputs.version_code }}
+        run: |
+          MSBUILD="${{ steps.find_msbuild.outputs.msbuild_path }}"
+          if [ -z "$MSBUILD" ] || [ "$MSBUILD" = "msbuild" ]; then
+            MSBUILD="msbuild"
+          fi
+          $MSBUILD Werhes.Vkz.iOS/Werhes.Vkz.iOS.csproj /p:Configuration=${{ env.CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ steps.version.outputs.version_name }} /p:VersionCode=${{ steps.version.outputs.version_code }}
 
       - name: Find IPA file
         id: find_artifact
@@ -240,7 +282,7 @@ jobs:
           $notesBlock = if ([string]::IsNullOrEmpty($releaseNotes)) { "" } else { "`n*Notes:* ${releaseNotes}" }
           
           $message = @"
-          🚀 *VK Z Build v${versionName}* 🚀
+          🚀 *Сборка VK Z v${versionName}* 🚀
           
           ${androidText}
           ${iosText}

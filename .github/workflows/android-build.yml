@@ -50,6 +50,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Xamarin Android workload
+        run: dotnet workload install android maui 2>/dev/null || true
+
       - name: Restore NuGet packages
         run: dotnet restore Werhes.Vkz.sln
 
