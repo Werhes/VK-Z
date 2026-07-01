@@ -74,7 +74,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Restore NuGet packages
-        run: nuget restore Werhes.Vkz.sln
+        run: dotnet restore Werhes.Vkz.sln
 
       - name: Set version variables
         id: version
@@ -155,7 +155,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore NuGet packages
-        run: nuget restore Werhes.Vkz.sln
+        run: dotnet restore Werhes.Vkz.sln
 
       - name: Set version variables
         id: version

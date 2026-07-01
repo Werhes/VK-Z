@@ -51,7 +51,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Restore NuGet packages
-        run: nuget restore Werhes.Vkz.sln
+        run: dotnet restore Werhes.Vkz.sln
 
       - name: Build Android project (Release)
         run: msbuild ${{ env.PROJECT_PATH }} /t:PackageForAndroid /p:Configuration=${{ env.ANDROID_CONFIGURATION }} /p:AndroidPackageFormat=aab /p:VersionName=${{ github.event.inputs.version_name }} /p:VersionCode=${{ github.event.inputs.version_code }}

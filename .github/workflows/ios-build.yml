@@ -50,7 +50,7 @@ jobs:
           echo "Xamarin.iOS should be pre-installed on macOS runner"
 
       - name: Restore NuGet packages
-        run: nuget restore Werhes.Vkz.sln
+        run: dotnet restore Werhes.Vkz.sln
 
       - name: Build iOS project (Release for iPhone)
         run: msbuild ${{ env.PROJECT_PATH }} /p:Configuration=${{ env.IOS_CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ github.event.inputs.version_name }} /p:VersionCode=${{ github.event.inputs.version_code }}
