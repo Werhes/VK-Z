@@ -279,7 +279,7 @@ enum Genre: String, CaseIterable {
 }
 
 // MARK: - ViewModel
-final class SearchViewModel: ObservableObject {
+final class SearchViewModel: ObservableObject, @unchecked Sendable {
     @Published var searchResults: [VKTrack] = []
     @Published var popularTracks: [VKTrack] = []
     @Published var isSearching = false

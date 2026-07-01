@@ -400,7 +400,7 @@ struct MixDetailView: View {
 }
 
 // MARK: - ViewModel
-final class MixViewModel: ObservableObject {
+final class MixViewModel: ObservableObject, @unchecked Sendable {
     @Published var mixes: [VKMix] = []
     @Published var isLoading = false
     

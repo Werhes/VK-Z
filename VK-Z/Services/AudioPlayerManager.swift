@@ -36,7 +36,7 @@ final class AudioPlayerManager: NSObject, ObservableObject {
     private func setupAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.allowAirPlay, .allowBluetooth])
+            try session.setCategory(.playback, mode: .default, options: [.allowAirPlay, .allowBluetoothHFP])
             try session.setActive(true)
         } catch {
             print("Failed to setup audio session: \(error)")
@@ -106,14 +106,14 @@ final class AudioPlayerManager: NSObject, ObservableObject {
     }
     
     func play() {
-        guard playerState == .paused else { return }
+        guard playerState == .paused || playerState == .stopped else { return }
         player?.play()
         playerState = .playing
         updateNowPlayingInfo()
     }
     
     func pause() {
-        guard playerState == .playing else { return }
+        guard case .playing = playerState else { return }
         player?.pause()
         playerState = .paused
         updateNowPlayingInfo()

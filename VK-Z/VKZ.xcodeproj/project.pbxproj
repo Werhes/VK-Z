@@ -18,6 +18,7 @@
 		VKZ_VIEWS_PLAYLISTS /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_PLAYLISTS_REF; };
 		VKZ_VIEWS_SEARCH /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_SEARCH_REF; };
 		VKZ_RESOURCES /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = VKZ_RESOURCES_REF; };
+		VKZ_APPTHEME /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_APPTHEME_REF; };
 		VKZ_ALAMOFIRE /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = VKZ_ALAMOFIRE_PROD; };
 		VKZ_KINGFISHER /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = VKZ_KINGFISHER_PROD; };
 		VKZ_JWTDECODE /* JWTDecode in Frameworks */ = {isa = PBXBuildFile; productRef = VKZ_JWTDECODE_PROD; };
@@ -35,6 +36,7 @@
 		VKZ_VIEWS_PLAYLISTS_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
 		VKZ_VIEWS_SEARCH_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		VKZ_RESOURCES_REF = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
+		VKZ_APPTHEME_REF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		VKZ_APP_DELEGATE = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKZApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -60,6 +62,7 @@
 				VKZ_SERVICES_GROUP,
 				VKZ_VIEWS_GROUP,
 				VKZ_RESOURCES_REF,
+				VKZ_APPTHEME_REF,
 			);
 			path = "";
 			sourceTree = "<group>";
@@ -199,6 +202,7 @@
 				VKZ_VIEWS_PLAYER,
 				VKZ_VIEWS_PLAYLISTS,
 				VKZ_VIEWS_SEARCH,
+				VKZ_APPTHEME,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

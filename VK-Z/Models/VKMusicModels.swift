@@ -199,7 +199,7 @@ enum PlayerRepeatMode: String, Codable {
     case one
 }
 
-enum PlayerState {
+enum PlayerState: Equatable {
     case stopped
     case playing
     case paused

@@ -139,7 +139,7 @@ final class VKApiService {
     }
     
     // MARK: - API Requests
-    private func request<T: Decodable>(
+    private func request<T: Codable>(
         _ method: String,
         parameters: [String: Any] = [:],
         completion: @escaping (Result<T, Error>) -> Void

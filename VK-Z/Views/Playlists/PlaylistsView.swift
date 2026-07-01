@@ -532,7 +532,7 @@ struct TrackRowView: View {
 }
 
 // MARK: - ViewModel
-final class PlaylistsViewModel: ObservableObject {
+final class PlaylistsViewModel: ObservableObject, @unchecked Sendable {
     @Published var playlists: [VKPlaylist] = []
     @Published var recommendations: [VKTrack] = []
     @Published var popular: [VKTrack] = []
