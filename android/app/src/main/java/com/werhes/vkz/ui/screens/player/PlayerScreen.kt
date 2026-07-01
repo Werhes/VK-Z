@@ -48,7 +48,7 @@ fun PlayerScreen() {
         targetValue = 0.7f,
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Restart
         ),
         label = "glowAlpha"
     )

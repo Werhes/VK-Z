@@ -165,7 +165,7 @@ fun AuthScreen() {
                         containerColor = Color.Transparent,
                         contentColor = Color.White,
                         indicator = { tabPositions ->
-                            TabRowDefaults.SecondaryIndicator(
+                            TabRowDefaults.Indicator(
                                 modifier = Modifier.tabIndicatorOffset(tabPositions[authMode]),
                                 height = 3.dp,
                                 color = VKColors.accentBlue
