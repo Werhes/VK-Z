@@ -166,16 +166,10 @@ fun AuthScreen() {
                         containerColor = Color.Transparent,
                         contentColor = Color.White,
                         indicator = { tabPositions ->
-                            if (authMode < tabPositions.size) {
-                                Box(
-                                    modifier = Modifier
-                                        .offset(x = with(LocalDensity.current) { tabPositions[authMode].left.toDp() })
-                                        .width(with(LocalDensity.current) { (tabPositions[authMode].right - tabPositions[authMode].left).toDp() })
-                                        .padding(horizontal = 8.dp)
-                                        .height(3.dp)
-                                        .background(VKColors.accentBlue, RoundedCornerShape(1.5.dp))
-                                )
-                            }
+                            TabRowDefaults.Indicator(
+                                height = 3.dp,
+                                color = VKColors.accentBlue
+                            )
                         },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
