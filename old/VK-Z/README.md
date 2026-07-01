@@ -33,7 +33,7 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/yourusername/VK-Z.git
+git clone https://github.com/Werhes/VK-Z.git
 ```
 
 2. Откройте проект в Xcode:
