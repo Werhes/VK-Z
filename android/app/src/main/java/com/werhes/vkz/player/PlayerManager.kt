@@ -7,12 +7,17 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.werhes.vkz.data.model.PlayerState
 import com.werhes.vkz.data.model.RepeatMode
 import com.werhes.vkz.data.model.VKTrack
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 object PlayerManager {
     private var exoPlayer: ExoPlayer? = null
+    private var positionJob: kotlinx.coroutines.Job? = null
 
     private val _currentTrack = MutableStateFlow<VKTrack?>(null)
     val currentTrack: StateFlow<VKTrack?> = _currentTrack.asStateFlow()
@@ -63,9 +68,9 @@ object PlayerManager {
         }
 
         // Position updates
-        kotlinx.coroutines.MainScope().launch {
+        positionJob = CoroutineScope(Dispatchers.Main).launch {
             while (true) {
-                kotlinx.coroutines.delay(500)
+                delay(500)
                 _currentPosition.value = exoPlayer?.currentPosition ?: 0
                 _duration.value = exoPlayer?.duration ?: 0
             }
@@ -182,14 +187,8 @@ object PlayerManager {
     }
 
     fun release() {
+        positionJob?.cancel()
         exoPlayer?.release()
         exoPlayer = null
     }
-}
-
-private fun kotlinx.coroutines.MainScope(): kotlinx.coroutines.CoroutineScope =
-    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
-
-private fun kotlinx.coroutines.CoroutineScope.launch(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {
-    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) { block() }
 }

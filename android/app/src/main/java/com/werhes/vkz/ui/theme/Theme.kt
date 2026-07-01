@@ -33,19 +33,19 @@ object VKColors {
     val primaryGradient = Brush.linearGradient(
         colors = listOf(accentBlue, accentPurple),
         start = androidx.compose.ui.geometry.Offset.Zero,
-        end = androidx.compose.ui.geometry.Offset.Infinite
+        end = androidx.compose.ui.geometry.Offset(100f, 100f)
     )
 
     val warmGradient = Brush.linearGradient(
         colors = listOf(accentOrange, accentPink),
         start = androidx.compose.ui.geometry.Offset.Zero,
-        end = androidx.compose.ui.geometry.Offset.Infinite
+        end = androidx.compose.ui.geometry.Offset(100f, 100f)
     )
 
     val coolGradient = Brush.linearGradient(
         colors = listOf(accentBlue, accentGreen),
         start = androidx.compose.ui.geometry.Offset.Zero,
-        end = androidx.compose.ui.geometry.Offset.Infinite
+        end = androidx.compose.ui.geometry.Offset(100f, 100f)
     )
 
     val authGradient = Brush.verticalGradient(
