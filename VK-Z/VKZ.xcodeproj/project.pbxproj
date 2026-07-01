@@ -18,6 +18,9 @@
 		VKZ_VIEWS_PLAYLISTS /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_PLAYLISTS_REF; };
 		VKZ_VIEWS_SEARCH /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VKZ_VIEWS_SEARCH_REF; };
 		VKZ_RESOURCES /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = VKZ_RESOURCES_REF; };
+		VKZ_ALAMOFIRE /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = VKZ_ALAMOFIRE_PROD; };
+		VKZ_KINGFISHER /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = VKZ_KINGFISHER_PROD; };
+		VKZ_JWTDECODE /* JWTDecode in Frameworks */ = {isa = PBXBuildFile; productRef = VKZ_JWTDECODE_PROD; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +37,19 @@
 		VKZ_RESOURCES_REF = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
 		VKZ_APP_DELEGATE = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKZApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		VKZ_FRAMEWORKS_PHASE = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				VKZ_ALAMOFIRE,
+				VKZ_KINGFISHER,
+				VKZ_JWTDECODE,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		VKZ_ROOT_GROUP = {
@@ -111,6 +127,7 @@
 			buildConfigurationList = VKZ_BUILD_CONFIG_LIST;
 			buildPhases = (
 				VKZ_SOURCES_PHASE,
+				VKZ_FRAMEWORKS_PHASE,
 				VKZ_RESOURCES_PHASE,
 			);
 			buildRules = (
@@ -118,6 +135,11 @@
 			dependencies = (
 			);
 			name = VKZ;
+			packageProductDependencies = (
+				VKZ_ALAMOFIRE_PROD,
+				VKZ_KINGFISHER_PROD,
+				VKZ_JWTDECODE_PROD,
+			);
 			productName = VKZ;
 			productType = "com.apple.product-type.application";
 		};
@@ -141,6 +163,11 @@
 				Base,
 			);
 			mainGroup = VKZ_ROOT_GROUP;
+			packageReferences = (
+				VKZ_ALAMOFIRE_PKG,
+				VKZ_KINGFISHER_PKG,
+				VKZ_JWTDECODE_PKG,
+			);
 			productRefGroup = VKZ_ROOT_GROUP;
 			projectDirPath = "";
 			projectRoot = "";
@@ -276,6 +303,51 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		VKZ_ALAMOFIRE_PKG = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.9.0;
+			};
+		};
+		VKZ_KINGFISHER_PKG = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.12.0;
+			};
+		};
+		VKZ_JWTDECODE_PKG = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/auth0/JWTDecode.swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		VKZ_ALAMOFIRE_PROD = {
+			isa = XCSwiftPackageProductDependency;
+			package = VKZ_ALAMOFIRE_PKG;
+			productName = Alamofire;
+		};
+		VKZ_KINGFISHER_PROD = {
+			isa = XCSwiftPackageProductDependency;
+			package = VKZ_KINGFISHER_PKG;
+			productName = Kingfisher;
+		};
+		VKZ_JWTDECODE_PROD = {
+			isa = XCSwiftPackageProductDependency;
+			package = VKZ_JWTDECODE_PKG;
+			productName = JWTDecode;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = VKZ_PROJECT;
 }

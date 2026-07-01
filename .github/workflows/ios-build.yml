@@ -32,34 +32,57 @@ jobs:
       - name: 📥 Checkout репозитория
         uses: actions/checkout@v4
 
-      - name: 🔍 Проверка Xcode
+      - name: 🔍 Проверка Xcode и инструментов
         run: |
           xcodebuild -version
           xcode-select -p
+          swift --version
 
-      - name: 🏗 Сборка .app через SPM
+      - name: 🔧 Разрешение SPM зависимостей
         run: |
           cd VK-Z
-          swift build \
-            -c debug \
-            -Xswiftc "-sdk" -Xswiftc "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
-            -Xswiftc "-target" -Xswiftc "x86_64-apple-ios17.0-simulator" \
+          xcodebuild -resolvePackageDependencies \
+            -project VKZ.xcodeproj \
+            -scheme VKZ \
+            -clonedSourcePackagesDirPath .build/spm-checkouts \
+            2>&1 | tee resolve.log
+          echo "✅ SPM зависимости разрешены"
+
+      - name: 🏗 Сборка .app через xcodebuild (симулятор)
+        run: |
+          cd VK-Z
+          DERIVED_DATA_PATH="${{ runner.temp }}/derived-data"
+          
+          xcodebuild \
+            -project VKZ.xcodeproj \
+            -scheme VKZ \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0' \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
+            -clonedSourcePackagesDirPath .build/spm-checkouts \
+            -configuration Debug \
+            clean build \
             2>&1 | tee build.log
           
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ Сборка не удалась!"
+            echo "❌ Сборка не удалась! Смотрим последние 50 строк лога:"
+            tail -50 build.log
             exit 1
           fi
           echo "✅ Сборка завершена"
 
-      - name: 📦 Упаковка в .ipa
+      - name: 📦 Упаковка в .app
         run: |
           cd VK-Z
-          APP_PATH=$(find .build -name "*.app" -type d | head -1)
+          DERIVED_DATA_PATH="${{ runner.temp }}/derived-data"
+          
+          APP_PATH=$(find "$DERIVED_DATA_PATH" -name "*.app" -type d | head -1)
           echo "Найден .app: $APP_PATH"
           
           if [ -z "$APP_PATH" ]; then
             echo "❌ .app не найден!"
+            echo "Содержимое DerivedData:"
+            ls -la "$DERIVED_DATA_PATH/Build/Products/" 2>/dev/null || echo "Нет Products"
             exit 1
           fi
           
