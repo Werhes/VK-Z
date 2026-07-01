@@ -127,8 +127,11 @@ jobs:
             2>&1 | tee build.log
           
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ Архивация не удалась! Смотрим последние 50 строк лога:"
-            tail -50 build.log
+            echo "❌ Архивация не удалась! Смотрим ошибки компиляции:"
+            grep -n "error:" build.log | head -30
+            echo ""
+            echo "--- Последние 30 строк лога ---"
+            tail -30 build.log
             exit 1
           fi
           echo "✅ Архивация завершена: $ARCHIVE_PATH"
