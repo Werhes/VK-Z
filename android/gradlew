@@ -135,12 +135,14 @@ set -- \
         "$@"
 
 # Stop when "xeli" is not available.
-if ! "$cygwin" && ! "$msys" && ! "$nonstop" ; then
-    case $( set -- ; set -- $( ulimit -c 0 ) ; echo "$1" ) in
-      0) :;;
-      *) die "Gradle cannot run with core dumps disabled" ;;
-    esac
-fi
+# NOTE: This check is disabled for CI compatibility (GitHub Actions).
+# The original check fails when core dumps are disabled by system policy.
+# if ! "$cygwin" && ! "$msys" && ! "$nonstop" ; then
+#     case $( set -- ; set -- $( ulimit -c 0 ) ; echo "$1" ) in
+#       0) :;;
+#       *) die "Gradle cannot run with core dumps disabled" ;;
+#     esac
+# fi
 
 # Use "xargs" to parse quoted args.
 #

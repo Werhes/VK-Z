@@ -58,40 +58,12 @@ jobs:
           cd android
           chmod +x gradlew
           
-          # Исправляем "Gradle cannot run with core dumps disabled"
-          # Эта ошибка возникает на GitHub Actions из-за ограничений core dumps
-          echo "=== Диагностика core dumps ==="
-          ulimit -a 2>/dev/null | grep core || echo "core: $(ulimit -c)"
-          cat /proc/sys/kernel/core_pattern 2>/dev/null || echo "Нет /proc/sys/kernel/core_pattern"
-          
-          # Способ 1: sysctl (требует sudo)
-          sudo sysctl -w kernel.core_pattern=core 2>/dev/null || true
-          
-          # Способ 2: prlimit (из util-linux)
-          sudo prlimit --pid=$$ --core=unlimited 2>/dev/null || true
-          
-          # Способ 3: ulimit (shell level)
+          # Устанавливаем core ulimit (необходимо для Gradle)
           ulimit -c unlimited 2>/dev/null || true
-          
-          echo "core ulimit после исправлений: $(ulimit -c)"
-          echo "core_pattern: $(cat /proc/sys/kernel/core_pattern 2>/dev/null || echo 'N/A')"
-          echo "=============================="
+          echo "core ulimit: $(ulimit -c)"
           
           export GRADLE_OPTS="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Dorg.gradle.jvmargs=-Xmx2048m"
-          export JAVA_TOOL_OPTIONS="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false"
-          
-          # Пробуем собрать
-          ./gradlew assembleDebug --no-daemon 2>&1 || {
-            echo "❌ Первая попытка не удалась. Пробуем через Docker..."
-            cd ..
-            # Fallback: используем официальный Gradle Docker-образ
-            docker run --rm \
-              -v "$(pwd):/project" \
-              -w /project/android \
-              -e GRADLE_OPTS="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Dorg.gradle.jvmargs=-Xmx2048m" \
-              gradle:8.5-jdk17 \
-              ./gradlew assembleDebug --no-daemon 2>&1
-          }
+          ./gradlew assembleDebug --no-daemon 2>&1
         shell: bash
 
       - name: 📋 Поиск APK
