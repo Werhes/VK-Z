@@ -53,17 +53,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: 🏗 Установка Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.5"
+
       - name: 📦 Сборка Universal APK (Debug)
         run: |
           cd android
-          chmod +x gradlew
           
           # Устанавливаем core ulimit (необходимо для Gradle)
           ulimit -c unlimited 2>/dev/null || true
           echo "core ulimit: $(ulimit -c)"
           
           export GRADLE_OPTS="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Dorg.gradle.jvmargs=-Xmx2048m"
-          ./gradlew assembleDebug --no-daemon 2>&1
+          gradle assembleDebug --no-daemon 2>&1
         shell: bash
 
       - name: 📋 Поиск APK
