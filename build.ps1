@@ -20,10 +20,7 @@ param(
     [string]$Configuration = "Release",
 
     [Parameter(Mandatory = $false)]
-    [string]$MsBuildPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
-
-    [Parameter(Mandatory = $false)]
-    [string]$NuGetPath = "nuget.exe",
+    [string]$MsBuildPath = "",
 
     [Parameter(Mandatory = $false)]
     [string]$TelegramBotToken = "",
@@ -84,6 +81,43 @@ ${emoji} *Local Build VK Z (${platformUpper})* ${emoji}
     }
 }
 
+function Find-MsBuild {
+    $possiblePaths = @(
+        "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\MSBuild.exe",
+        "/Library/Frameworks/Mono.framework/Versions/Current/Commands/msbuild",
+        "/usr/local/bin/msbuild",
+        "/usr/bin/msbuild"
+    )
+
+    # If user provided a path, use it
+    if ($MsBuildPath -and (Test-Path $MsBuildPath)) {
+        return $MsBuildPath
+    }
+
+    # Search common paths
+    foreach ($p in $possiblePaths) {
+        if (Test-Path $p) {
+            return $p
+        }
+    }
+
+    # Try to find via Get-Command
+    try {
+        $cmd = Get-Command msbuild -ErrorAction Stop
+        return $cmd.Source
+    } catch {
+        # Last resort
+        return "msbuild"
+    }
+}
+
 function Build-Android {
     Write-Color "`n========================================" -Color Cyan
     Write-Color "  Building Android APK/AAB" -Color Cyan
@@ -92,18 +126,20 @@ function Build-Android {
     Write-Color "========================================" -Color Cyan
 
     $projectPath = "Werhes.Vkz.AndroidApp\Werhes.Vkz.AndroidApp.csproj"
+    $msbuild = Find-MsBuild
 
     # Restore NuGet packages
     Write-Color "[1/3] Restoring NuGet packages..." -Color Yellow
-    & $NuGetPath restore Werhes.Vkz.sln
+    dotnet restore Werhes.Vkz.sln
     if ($LASTEXITCODE -ne 0) {
-        Write-Color "[ERROR] NuGet restore failed!" -Color Red
+        Write-Color "[ERROR] dotnet restore failed!" -Color Red
         return $false
     }
 
     # Build project
     Write-Color "[2/3] Building Android project..." -Color Yellow
-    & $MsBuildPath $projectPath /t:PackageForAndroid /p:Configuration=$Configuration /p:AndroidPackageFormat=aab /p:VersionName=$VersionName /p:VersionCode=$VersionCode
+    Write-Color "  MSBuild: $msbuild" -Color Gray
+    & $msbuild $projectPath /t:PackageForAndroid /p:Configuration=$Configuration /p:AndroidPackageFormat=aab /p:VersionName=$VersionName /p:VersionCode=$VersionCode
     if ($LASTEXITCODE -ne 0) {
         Write-Color "[ERROR] Android build failed!" -Color Red
         return $false
@@ -136,18 +172,20 @@ function Build-iOS {
     Write-Color "========================================" -Color Cyan
 
     $projectPath = "Werhes.Vkz.iOS\Werhes.Vkz.iOS.csproj"
+    $msbuild = Find-MsBuild
 
     # Restore NuGet packages
     Write-Color "[1/3] Restoring NuGet packages..." -Color Yellow
-    & $NuGetPath restore Werhes.Vkz.sln
+    dotnet restore Werhes.Vkz.sln
     if ($LASTEXITCODE -ne 0) {
-        Write-Color "[ERROR] NuGet restore failed!" -Color Red
+        Write-Color "[ERROR] dotnet restore failed!" -Color Red
         return $false
     }
 
     # Build project
     Write-Color "[2/3] Building iOS project..." -Color Yellow
-    & $MsBuildPath $projectPath /p:Configuration=$Configuration /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=$VersionName /p:VersionCode=$VersionCode
+    Write-Color "  MSBuild: $msbuild" -Color Gray
+    & $msbuild $projectPath /p:Configuration=$Configuration /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=$VersionName /p:VersionCode=$VersionCode
     if ($LASTEXITCODE -ne 0) {
         Write-Color "[ERROR] iOS build failed!" -Color Red
         return $false

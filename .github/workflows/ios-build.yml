@@ -33,7 +33,7 @@ env:
 jobs:
   build-ios:
     name: Build iOS IPA
-    runs-on: macos-latest
+    runs-on: macos-13
 
     steps:
       - name: Checkout repository
@@ -44,54 +44,19 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install Xamarin iOS workload
+      - name: List Xamarin SDK paths
         run: |
-          dotnet workload install ios maui 2>/dev/null || true
-          echo "Xamarin.iOS workload installed"
-
-      - name: Find msbuild path
-        id: find_msbuild
-        shell: pwsh
-        run: |
-          $possiblePaths = @(
-            "/Library/Frameworks/Mono.framework/Versions/Current/Commands/msbuild",
-            "/usr/local/bin/msbuild",
-            "/usr/bin/msbuild",
-            "$env:MONO_PREFIX/bin/msbuild"
-          )
-          $found = $false
-          foreach ($p in $possiblePaths) {
-            if (Test-Path $p) {
-              echo "msbuild_path=$p" >> $env:GITHUB_OUTPUT
-              echo "Found msbuild at: $p"
-              $found = $true
-              break
-            }
-          }
-          if (-not $found) {
-            # Try to find via which
-            $whichMsbuild = $(which msbuild 2>/dev/null)
-            if ($whichMsbuild) {
-              echo "msbuild_path=$whichMsbuild" >> $env:GITHUB_OUTPUT
-              echo "Found msbuild at: $whichMsbuild"
-              $found = $true
-            }
-          }
-          if (-not $found) {
-            echo "msbuild_path=msbuild" >> $env:GITHUB_OUTPUT
-            echo "msbuild not found, will try 'msbuild' from PATH"
-          }
+          echo "Looking for Xamarin.iOS..."
+          ls -la /Library/Frameworks/Xamarin.iOS.framework/Versions/Current/bin/ 2>/dev/null || echo "Not found at Xamarin.iOS.framework"
+          ls -la /Library/Frameworks/Mono.framework/Versions/Current/Commands/ 2>/dev/null || echo "Not found at Mono.framework"
+          which msbuild 2>/dev/null && msbuild --version 2>/dev/null || echo "msbuild not in PATH"
 
       - name: Restore NuGet packages
         run: dotnet restore Werhes.Vkz.sln
 
       - name: Build iOS project (Release for iPhone)
         run: |
-          MSBUILD="${{ steps.find_msbuild.outputs.msbuild_path }}"
-          if [ -z "$MSBUILD" ] || [ "$MSBUILD" = "msbuild" ]; then
-            MSBUILD="msbuild"
-          fi
-          $MSBUILD ${{ env.PROJECT_PATH }} /p:Configuration=${{ env.IOS_CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ github.event.inputs.version_name }} /p:VersionCode=${{ github.event.inputs.version_code }}
+          msbuild ${{ env.PROJECT_PATH }} /p:Configuration=${{ env.IOS_CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ github.event.inputs.version_name }} /p:VersionCode=${{ github.event.inputs.version_code }}
 
       - name: Find IPA file
         id: find_artifact
