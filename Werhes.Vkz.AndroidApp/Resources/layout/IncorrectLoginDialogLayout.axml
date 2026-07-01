@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="300dp"
+    android:layout_height="140dp"
+android:padding="7dp">
+    <TextView
+        android:text="РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minWidth="25px"
+        android:minHeight="25px"
+        android:id="@+id/textView1"
+        android:textColor="#ff1b1b1b"
+        android:textStyle="bold" />
+    <TextView
+        android:text="РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·, РµСЃР»Рё РІС‹ Р·Р°Р±С‹Р»Рё Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ, РІРѕСЃС‚Р°РЅРѕРІРёС‚Рµ РЅР° СЃР°Р№С‚Рµ Р’РљРѕРЅС‚Р°РєС‚Рµ."
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView2"
+        android:singleLine="false"
+        android:layout_marginTop="15.3dp" />
+    <Button
+        android:text="РћРљ"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/buttonIncorrectLoginOk"
+        android:layout_gravity="center"
+        android:gravity="center" 
+        android:background="@android:color/transparent"
+        
+    />
+
+
+</LinearLayout>

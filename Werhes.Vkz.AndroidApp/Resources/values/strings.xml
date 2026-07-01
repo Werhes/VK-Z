@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VK Z</string>
+    <string name="title_home">Р“Р»Р°РІРЅР°СЏ</string>
+  <string name="title_pop">РџРѕРїСѓР»СЏСЂРЅРѕРµ</string>
+  <string name="title_tracks">РњСѓР·С‹РєР°</string>
+  <string name="title_search">РџРѕРёСЃРє</string>
+  <string name="title_settings">РќР°СЃС‚СЂРѕР№РєРё</string>
+  <string name="auth_caption">Р’РѕР№РґРёС‚Рµ РІ СЃРІРѕР№ Р°РєРєР°СѓРЅС‚ Р’РљРѕРЅС‚Р°РєС‚Рµ</string>
+  <string name="auth_btn">Р’РѕР№С‚Рё</string>
+  <string name="login_hint">E-Mail РёР»Рё С‚РµР»РµС„РѕРЅ</string>
+  <string name="pwd_hint">РџР°СЂРѕР»СЊ</string>
+    <string name="PlaylistsTitleString">РџР»РµР№Р»РёСЃС‚С‹</string>
+    <string name="MusicTitleString">РњСѓР·С‹РєР°</string>
+  <string name="settings_main">РћСЃРЅРѕРІРЅС‹Рµ</string>
+</resources>

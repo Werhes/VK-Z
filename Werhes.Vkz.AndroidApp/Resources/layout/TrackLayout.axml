@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="62dp"
+    android:minWidth="25px"
+    android:minHeight="25px"
+    android:paddingTop="7dp"
+    android:gravity="fill">
+
+    <com.makeramen.roundedimageview.RoundedImageView
+        android:src= "@drawable/placeholder"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_marginLeft = "15dp"
+        android:minWidth="25px"
+        android:minHeight="25px"
+        app:riv_corner_radius="5dp"
+        android:id="@+id/imageViewCover"
+        android:foregroundGravity="bottom"
+        android:layout_gravity="center"
+        android:layout_centerVertical="true"
+        />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:orientation= "vertical"
+        android:layout_marginLeft="70dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_centerVertical="true"
+        >
+        <TextView
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="0dp"
+            android:id="@+id/textViewTitle"
+            android:textColor="#ff000000"
+            android:fadingEdge="horizontal"
+            android:scrollHorizontally="true"
+            android:singleLine="true"
+            android:textSize = "15dp"
+            android:text="РћС‡РµРЅСЊ РѕС‡РµРЅСЊ РґР»РёРЅРЅРѕРµ РЅР°Р·РІР°РЅРёРµ С‚СЂРµРєР°"
+            android:maxWidth="190dp" />
+        <TextView
+            android:text="РРјСЏ РёСЃРїРѕР»РЅРёС‚РµР»СЏ"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fadingEdge="horizontal"
+            android:scrollHorizontally="true"
+            android:id="@+id/textViewArtist"
+            android:textColor="#ff4e4e4e"
+            android:textSize="12dp"
+            android:maxWidth="205dp"
+            android:singleLine="true" />
+    </LinearLayout>
+    <TextView
+        android:text="0:00"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/DurationTrack"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:textAlignment="textEnd"
+        android:layout_marginRight="15.0dp" />
+
+</RelativeLayout>
+

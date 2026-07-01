@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginBottom="56dp">
+
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:orientation = "vertical"
+        android:layout_centerHorizontal= "true"
+        android:layout_centerVertical= "true"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+    <TextView
+       android:layout_width="wrap_content"
+        android:textSize="20dp"
+        android:layout_centerHorizontal= "true"
+        android:textStyle="bold"
+        android:textColor="#000"
+       android:text="РљСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°"
+       android:layout_height="wrap_content"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:text="РџРѕ РЅРµРїРѕРЅСЏС‚РЅС‹Рј РЅР°Рј РїСЂРёС‡РёРЅР°Рј (РѕРїСЏС‚СЊ РІРёРЅРѕРІР°С‚ Р’РљРѕРЅС‚Р°РєС‚Рµ), С‡Р°СЃС‚СЊ РїСЂРёР»РѕР¶РµРЅРёСЏ, РєРѕС‚РѕСЂР°СЏ РґРѕР»Р¶РЅР° Р±С‹Р»Р° РѕС‚РєСЂС‹С‚СЊСЃСЏ, СЌС‚РѕРіРѕ РЅРµ СЃРґРµР»Р°Р»Р°. РўРєРЅРёС‚Рµ РїРѕ Р»СЋР±РѕР№ РєРЅРѕРїРєРµ РІ РјРµРЅСЋ РЅР°РІРёРіР°С†РёРё, С‡С‚РѕР±С‹ РїРѕРІРµСЂРЅСѓС‚СЊ РІСЂРµРјСЏ РІСЃРїСЏС‚СЊ."
+        android:layout_centerHorizontal= "true"
+        android:layout_height="wrap_content"/>
+    </LinearLayout>
+   
+
+</RelativeLayout>
+
+

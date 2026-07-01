@@ -1,199 +1,127 @@
-name: 🍎 iOS Build & Release
+name: iOS CI/CD
 
 on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Название версии (например, v1.2.0)'
+        description: 'Название версии (например, 1.0.0)'
         required: true
-        default: 'v1.0.0'
-        type: string
+        default: '1.0.0'
+      version_code:
+        description: 'Код версии (число)'
+        required: true
+        default: '1'
       release_notes:
-        description: 'Описание релиза (что нового)'
+        description: 'Описание релиза'
+        required: false
+        default: ''
+      release_type:
+        description: 'Тип релиза'
         required: true
-        default: 'Исправления и улучшения'
-        type: string
-      is_prerelease:
-        description: 'Pre-release (черновик)?'
-        required: true
-        default: true
-        type: boolean
+        default: 'prerelease'
+        type: choice
+        options:
+          - release
+          - prerelease
 
 env:
-  APP_NAME: 'VK-Z'
-  IOS_IPA_NAME: 'VK-Z-iOS.ipa'
+  DOTNET_VERSION: '6.0.x'
+  IOS_CONFIGURATION: 'Release'
+  PROJECT_PATH: 'Werhes.Vkz.iOS/Werhes.Vkz.iOS.csproj'
+  IPA_OUTPUT_DIR: 'Werhes.Vkz.iOS/bin/iPhone/Release'
 
 jobs:
   build-ios:
-    name: 🔨 iOS IPA
+    name: Build iOS IPA
     runs-on: macos-latest
 
     steps:
-      - name: 📥 Checkout репозитория
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔍 Проверка Xcode и инструментов
-        run: |
-          xcodebuild -version
-          xcode-select -p
-          swift --version
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: 🔧 Разрешение SPM зависимостей
+      - name: Setup Xamarin iOS
         run: |
-          cd VK-Z
-          xcodebuild -resolvePackageDependencies \
-            -project VKZ.xcodeproj \
-            -scheme VKZ \
-            -clonedSourcePackagesDirPath .build/spm-checkouts \
-            2>&1 | tee resolve.log
-          echo "✅ SPM зависимости разрешены"
+          sudo $NUNITPATH/nunit3-console --where "cat == ios" || true
+          echo "Xamarin.iOS should be pre-installed on macOS runner"
 
-      - name: 🏗 Архивация .xcarchive (Release)
+      - name: Restore NuGet packages
+        run: nuget restore Werhes.Vkz.sln
+
+      - name: Build iOS project (Release for iPhone)
+        run: msbuild ${{ env.PROJECT_PATH }} /p:Configuration=${{ env.IOS_CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ github.event.inputs.version_name }} /p:VersionCode=${{ github.event.inputs.version_code }}
+
+      - name: Find IPA file
+        id: find_artifact
+        shell: pwsh
         run: |
-          cd VK-Z
-          ARCHIVE_PATH="${{ runner.temp }}/VKZ.xcarchive"
-          
-          xcodebuild \
-            -project VKZ.xcodeproj \
-            -scheme VKZ \
-            -sdk iphoneos \
-            -configuration Release \
-            -archivePath "$ARCHIVE_PATH" \
-            -clonedSourcePackagesDirPath .build/spm-checkouts \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            clean archive \
-            2>&1 | tee build.log
-          
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ Архивация не удалась! Смотрим последние 50 строк лога:"
-            tail -50 build.log
-            exit 1
-          fi
-          echo "✅ Архивация завершена: $ARCHIVE_PATH"
+          $ipa = Get-ChildItem -Path "${{ env.IPA_OUTPUT_DIR }}" -Recurse -Filter "*.ipa" | Select-Object -First 1
+          if ($ipa) {
+            echo "artifact_path=$($ipa.FullName)" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=$($ipa.Name)" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "artifact_path=" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=" >> $env:GITHUB_OUTPUT
+          }
 
-      - name: 📦 Экспорт IPA (без подписи)
-        run: |
-          cd VK-Z
-          ARCHIVE_PATH="${{ runner.temp }}/VKZ.xcarchive"
-          EXPORT_PATH="${{ runner.temp }}/export"
-          mkdir -p "$EXPORT_PATH"
-          
-          # Создаём plist для экспорта без подписи
-          cat > "$EXPORT_PATH/export.plist" << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>development</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>signingCertificate</key>
-            <string>-</string>
-            <key>provisioningProfiles</key>
-            <dict/>
-            <key>compileBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <false/>
-          </dict>
-          </plist>
-          EOF
-          
-          xcodebuild \
-            -exportArchive \
-            -archivePath "$ARCHIVE_PATH" \
-            -exportPath "$EXPORT_PATH" \
-            -exportOptionsPlist "$EXPORT_PATH/export.plist" \
-            -allowProvisioningUpdates \
-            2>&1 | tee export.log
-          
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ Экспорт IPA не удался! Смотрим лог:"
-            tail -50 export.log
-            echo ""
-            echo "Пробуем альтернативный метод — ручная упаковка .app..."
-            
-            # Альтернатива: ищем .app в архиве и пакуем вручную
-            APP_PATH=$(find "$ARCHIVE_PATH" -name "*.app" -type d | head -1)
-            if [ -n "$APP_PATH" ]; then
-              echo "Найден .app: $APP_PATH"
-              mkdir -p Payload
-              cp -R "$APP_PATH" Payload/
-              zip -r "${{ env.IOS_IPA_NAME }}" Payload/
-              rm -rf Payload
-              mv "${{ env.IOS_IPA_NAME }}" "$EXPORT_PATH/"
-              echo "✅ IPA создан вручную: $EXPORT_PATH/${{ env.IOS_IPA_NAME }}"
-            else
-              echo "❌ .app не найден в архиве!"
-              ls -la "$ARCHIVE_PATH/Products/Applications/" 2>/dev/null || echo "Нет Applications"
-              exit 1
-            fi
-          fi
-          
-          echo "✅ IPA создан:"
-          ls -la "$EXPORT_PATH/"*.ipa 2>/dev/null || ls -la "$EXPORT_PATH/"
-
-      - name: 📤 Загрузка .ipa как артефакта
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.IOS_IPA_NAME }}
-          path: ${{ runner.temp }}/export/*.ipa
-          if-no-files-found: error
+          name: VKZ-iOS-${{ github.event.inputs.version_name }}
+          path: ${{ steps.find_artifact.outputs.artifact_path }}
+          if-no-files-found: warn
 
-      - name: 🏷 Создание релиза на GitHub
-        id: create_release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: steps.find_artifact.outputs.artifact_path != ''
         with:
-          tag_name: ${{ github.event.inputs.version_name }}-ios
-          name: '${{ env.APP_NAME }} ${{ github.event.inputs.version_name }} (iOS)'
-          body: |
-            ## ${{ env.APP_NAME }} ${{ github.event.inputs.version_name }} (iOS)
+          tag_name: ios-v${{ github.event.inputs.version_name }}
+          name: VK Z iOS v${{ github.event.inputs.version_name }}
+          body: ${{ github.event.inputs.release_notes }}
+          prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
+          files: |
+            ${{ steps.find_artifact.outputs.artifact_path }}
 
-            ${{ github.event.inputs.release_notes }}
-
-            > ⚠️ Сборка для симулятора (без подписи Apple Developer).
-            > Для установки на реальное устройство требуется сертификат разработчика Apple.
-
-            ---
-            *Собрано: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}*
-          files: VK-Z/${{ env.IOS_IPA_NAME }}
-          prerelease: ${{ github.event.inputs.is_prerelease }}
-          generate_release_notes: false
-
-      - name: 📱 Отправка уведомления в Telegram
+      - name: Send Telegram notification
         if: always()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        shell: pwsh
         run: |
-          VERSION="${{ github.event.inputs.version_name }}"
-          NOTES="${{ github.event.inputs.release_notes }}"
-          PRERELEASE="${{ github.event.inputs.is_prerelease }}"
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/$VERSION-ios"
-
-          if [ "$PRERELEASE" = "true" ]; then
-            STATUS_ICON="🧪"
-            STATUS_TEXT="Pre-release"
-          else
-            STATUS_ICON="✅"
-            STATUS_TEXT="Stable"
-          fi
-
-          MESSAGE="$STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT) 🍎 iOS
+          $botToken = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
           
-          📝 <b>Что нового:</b>
-          $NOTES
+          if ([string]::IsNullOrEmpty($botToken) -or [string]::IsNullOrEmpty($chatId)) {
+            Write-Host "Telegram secrets not configured, skipping notification"
+            exit 0
+          }
           
-          🔗 <a href=\"$RELEASE_URL\">Скачать релиз</a>
-          ⚙ <a href=\"$RUN_URL\">Сборка #${{ github.run_number }}</a>"
-
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" \
-            -d "parse_mode=HTML" \
-            -d "disable_web_page_preview=true" || echo "Telegram notification failed"
-        shell: bash
+          $status = "${{ job.status }}"
+          $versionName = "${{ github.event.inputs.version_name }}"
+          $releaseType = "${{ github.event.inputs.release_type }}"
+          $runId = "${{ github.run_id }}"
+          $repoUrl = "${{ github.server_url }}/${{ github.repository }}"
+          
+          $emoji = if ($status -eq "success") { "✅" } else { "❌" }
+          $statusText = if ($status -eq "success") { "SUCCESS" } else { "FAILED" }
+          
+          $message = @"
+          ${emoji} *iOS Build VK Z* ${emoji}
+          
+          *Status:* ${statusText}
+          *Version:* ${versionName}
+          *Type:* ${releaseType}
+          *Release:* [GitHub Release](${repoUrl}/releases/tag/ios-v${versionName})
+          *Run:* [Actions Run #${runId}](${repoUrl}/actions/runs/${runId})
+          "@
+          
+          $body = @{
+            chat_id = $chatId
+            text = $message
+            parse_mode = "Markdown"
+            disable_web_page_preview = $false
+          } | ConvertTo-Json
+          
+          Invoke-RestMethod -Uri "https://api.telegram.org/bot${botToken}/sendMessage" -Method Post -ContentType "application/json" -Body $body

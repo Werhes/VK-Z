@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ScrollView
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent">
+        <LinearLayout 
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:orientation="vertical">
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_height="100dp"
+                android:background="@drawable/shadow">
+    
+                <com.makeramen.roundedimageview.RoundedImageView
+                        android:layout_width="100dp"
+                        android:layout_height="match_parent"
+                        app:riv_corner_radius="999dp"
+                        android:padding="14dp"
+                        android:src="@drawable/placeholder"
+                        android:id="@+id/vk_pfp"
+                />
+
+                <TextView
+                    android:textColor="@color/colorPrimaryDark"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:layout_marginLeft="100dp"
+                        android:textSize="18dp"
+                        android:text="Р§Р°Р№РЅРёРє СЃ С„СѓРЅРєС†РёРµР№ Р¶РѕРїР°"
+                        android:id="@+id/vkname"
+                
+                />
+                <Button
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_marginVertical="24dp"
+                        android:layout_marginEnd="20dp"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/exit" 
+                        android:id="@+id/exit_btn"
+                />
+            </RelativeLayout>
+    
+            <RelativeLayout android:layout_width="match_parent"
+                            android:layout_marginLeft="15dp"
+                            android:layout_marginRight="15dp"
+                            android:layout_marginTop="7.5dp"
+                            android:layout_height="115dp"
+                            android:background="@drawable/shadow"
+                android:visibility="gone"
+            >
+        
+                <ImageView android:layout_width="70dp" 
+                           android:layout_height="match_parent"
+                           android:src="@drawable/androidicon_pro"
+                />
+                <TextView
+                    android:textColor="@color/colorPrimaryDark"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:layout_marginLeft="70dp"
+                        android:textSize="18dp"
+                        android:text="РџРѕР»СѓС‡РёС‚Рµ РїРѕР»РЅСѓСЋ С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ СЃ VK Z Pro (РќРµС‚, РјС‹ РЅРµ РЅР°РіР»С‹Рµ. РњС‹ РїСЂРѕСЃС‚Рѕ С‚РѕР¶Рµ Р»СЋРґРё Рё С…РѕС‚РёРј РєСѓС€РѕС†.)"
+                
+                />
+            </RelativeLayout>
+
+            <RelativeLayout android:layout_width="match_parent"
+                            android:layout_marginLeft="15dp"
+                            android:layout_marginRight="15dp"
+                            android:layout_marginTop="7.5dp"
+                            android:layout_height="wrap_content"
+                android:paddingVertical="16dp"
+                android:paddingHorizontal="26dp"
+                            android:background="@drawable/shadow">
+
+                <TextView
+                    android:textColor="@color/colorPrimaryDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                android:text="РџР°Р»РёС‚СЂР° РїСЂРёР»РѕР¶РµРЅРёСЏ"
+        
+                android:textSize="18dp"/>
+
+                <RadioGroup
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="30dp">
+        
+                    <RadioButton
+                    android:textColor="@color/colorPrimaryDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="РЎРІРµС‚Р»Р°СЏ"
+                    android:checked="true"
+                    />
+
+                </RadioGroup>
+
+            </RelativeLayout>
+
+            <RelativeLayout android:layout_width="match_parent"
+                            android:layout_marginLeft="15dp"
+                            android:layout_marginRight="15dp"
+                            android:layout_marginTop="7.5dp"
+                            android:layout_height="wrap_content"
+                android:paddingVertical="16dp"
+                android:paddingHorizontal="26dp"
+                            android:background="@drawable/shadow">
+
+                <TextView
+                    android:textColor="@color/colorPrimaryDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                android:text="РњСѓР·С‹РєР° Р’РљРѕРЅС‚Р°РєС‚Рµ"
+        
+                android:textSize="18dp"/>
+
+                <CheckBox
+                    android:id="@+id/streamtovk_checkbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                android:text="РўСЂР°РЅСЃР»РёСЂРѕРІР°С‚СЊ РјСѓР·С‹РєСѓ РІ СЃС‚Р°С‚СѓСЃ"
+                android:layout_marginTop="30dp"/>
+
+            </RelativeLayout>
+
+
+            <RelativeLayout android:layout_width="match_parent"
+                            android:layout_marginLeft="15dp"
+                            android:layout_marginRight="15dp"
+                            android:layout_marginTop="7.5dp"
+                            android:layout_height="wrap_content"
+                android:paddingVertical="16dp"
+                android:paddingHorizontal="26dp"
+                            android:background="@drawable/shadow">
+
+                <TextView
+                    android:textColor="@color/colorPrimaryDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                android:text="РЇ РЅР°С€РµР» Р±Р°Рі"
+                android:textSize="18dp"/>
+
+                <TextView
+                    android:textColor="@color/colorPrimaryDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                android:text="Р’С‹ РјРѕР¶РµС‚Рµ РЅР°РїРёСЃР°С‚СЊ РѕРґРЅРѕРјСѓ РёР· СЂР°Р·СЂР°Р±РѕС‚С‡РёРєРѕРІ, С‡С‚РѕР±С‹ СЃРѕРѕР±С‰РёС‚СЊ Рѕ РЅРµРј :)"/>
+
+            </RelativeLayout>
+
+        <RelativeLayout android:layout_width="match_parent"
+                            android:layout_marginLeft="15dp"
+                            android:layout_marginRight="15dp"
+                            android:layout_marginTop="7.5dp"
+                            android:layout_height="wrap_content"
+                android:paddingVertical="16dp"
+                android:paddingHorizontal="26dp"
+                            android:background="@drawable/shadow">
+
+                <TextView
+                    android:textColor="@color/colorPrimaryDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                android:text="Р Р°Р·СЂР°Р±РѕС‚С‡РёРєРё"
+                android:textSize="18dp"/>
+                <Button
+                    android:id="@+id/werhes_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:background="@drawable/button"
+                android:text="werhes"
+                android:textColor="#FFF"
+                android:paddingHorizontal="30dp"/>
+                <Button
+                    android:id="@+id/dumbcat_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                    android:layout_marginLeft="130dp"
+                android:background="@drawable/button"
+                android:text="Werhes"
+                android:textColor="#FFF"
+                android:paddingHorizontal="30dp"/>
+            </RelativeLayout>
+
+            <RelativeLayout android:layout_width="match_parent"
+                            android:layout_marginLeft="15dp"
+                            android:layout_marginRight="15dp"
+                            android:layout_marginTop="7.5dp"
+                            android:layout_height="wrap_content"
+                android:paddingVertical="16dp"
+                android:paddingHorizontal="26dp"
+                            android:background="@drawable/shadow">
+
+                <TextView
+                    android:id="@+id/settings_version"
+                    android:textColor="@color/colorPrimaryDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                android:text="Р’РµСЂСЃРёСЏ РїСЂРёР»РѕР¶РµРЅРёСЏ 1.0 Release"
+                android:textSize="18dp"/>
+
+            </RelativeLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -1,121 +1,122 @@
-# VK Z
+# VK Z — Музыкальный плеер ВКонтакте
 
-**VK Z** — кроссплатформенный клиент музыки ВКонтакте без ограничений. Доступен на iOS, Android и Windows.
+**VK Z** — кроссплатформенное приложение для прослушивания музыки из ВКонтакте. Доступно для Android и iOS.
 
 ## Возможности
 
-- 🎵 **Прослушивание музыки** — все аудиозаписи пользователя
-- 📋 **Плейлисты** — просмотр и прослушивание плейлистов
-- 🔍 **Поиск** — поиск по каталогу VK
-- 🔥 **Популярное** — чарты и рекомендации
-- 🎛 **VK Mix** — умные миксы на основе треков
-- 📱 **Кроссплатформенность** — единый код для iOS, Android и Windows
-- 🎨 **Тёмная тема** — стильный дизайн в тёмных тонах
+- 🎵 Прослушивание музыки из ВКонтакте
+- 🔍 Поиск треков, альбомов и исполнителей
+- 📂 Плейлисты и рекомендации
+- 🎨 Material Design / iOS-native интерфейс
+- 📱 Оптимизировано для Android и iOS
+- 🔄 Автосборка через GitHub Actions
 
-## Авторизация
+## Технологии
 
-Приложение поддерживает два способа входа:
-
-### 1. По токену
-- **Через OAuth WebView** — стандартная авторизация через браузер VK
-- **Ручной ввод токена** — для продвинутых пользователей
-
-### 2. По номеру телефона
-- Ввод номера телефона и пароля
-- Поддержка двухфакторной авторизации (2FA)
-- Используется `auth.login` API с `client_secret` (как в Kate Mobile)
-
-> **Важно**: Вход по телефону работает через API VK с использованием `client_id` и `client_secret` приложения Kate Mobile. VK может блокировать такие запросы — в этом случае используйте вход по токену.
-
-## Платформы
-
-### iOS
-- **Язык**: Swift 5.9+
-- **Фреймворк**: SwiftUI + UIKit (WKWebView)
-- **Минимальная версия**: iOS 17.0
-- **Зависимости**: Alamofire, Kingfisher, JWTDecode
-- **Сборка**: Xcode 15+
-
-### Android
-- **Язык**: Kotlin
-- **Фреймворк**: Jetpack Compose
-- **Минимальная версия**: Android 7.0 (API 24)
-- **Зависимости**: Retrofit, OkHttp, Coil, Accompanist WebView
-- **Сборка**: Android Studio Hedgehog+
-
-
-## Сборка
-
-### iOS
-
-```bash
-# Открыть проект в Xcode
-open VK-Z/Package.swift
-
-# Или собрать через xcodebuild
-xcodebuild -scheme VK-Z -destination 'platform=iOS Simulator,name=iPhone 15' build
-```
-
-### Android
-
-```bash
-cd android
-./gradlew assembleDebug
-```
-
-
-## CI/CD
-
-Проект использует GitHub Actions для автоматической сборки всех платформ:
-
-- **iOS** — macOS runner, сборка через xcodebuild
-- **Android** — ubuntu runner, сборка через Gradle
-
-### Запуск вручную
-
-1. Перейти в **Actions** → **Build VK Z**
-2. Нажать **Run workflow**
-3. Заполнить параметры:
-   - `namevers` — версия сборки (например, `1.0.0`)
-   - `descr` — описание релиза
-   - `release` — создать релиз (`true`/`false`)
-   - `prerelease` — пререлиз (`true`/`false`)
+- **Платформа:** Xamarin.Android, Xamarin.iOS
+- **API:** VkNet, VkNet.AudioBypassService
+- **Плеер:** Plugin.MediaManager
+- **Логирование:** NLog
+- **Аналитика:** Microsoft AppCenter
+- **CI/CD:** GitHub Actions
 
 ## Структура проекта
 
 ```
-VK-Z/
-├── VK-Z/                    # iOS приложение (SwiftUI)
-│   ├── Models/              # Модели данных
-│   ├── Services/            # API сервис, аудио плеер
-│   ├── Views/               # Экраны (Auth, Player, Search, Playlists, Mix)
-│   └── Resources/           # Ресурсы (иконки, Info.plist)
-├── android/                 # Android приложение (Kotlin + Compose)
-│   └── app/src/main/java/com/werhes/vkz/
-│       ├── data/api/        # API сервис, AuthManager
-│       ├── data/model/      # Модели данных
-│       ├── ui/screens/      # Экраны (Auth, Player, Search, Playlists, Mix)
-│       └── ui/theme/        # Тёмная тема
+Werhes.Vkz.AndroidApp/          # Android-приложение
+├── Activities/                  # Activity (экраны)
+├── Adapters/                    # Адаптеры для списков
+├── Converters/                  # Конвертеры данных
+├── Models/                      # Модели данных
+├── Resources/                   # Ресурсы (layout, drawable, etc.)
+├── Services/                    # Сервисы (авторизация, плеер, etc.)
+└── ViewHolders/                 # ViewHolder для списков
+
+Werhes.Vkz.iOS/                  # iOS-приложение
+├── Converters/                  # Конвертеры данных
+├── Models/                      # Модели данных
+├── Resources/                   # Ресурсы (storyboard, xcassets)
+├── Services/                    # Сервисы (авторизация, плеер, etc.)
+├── ViewControllers/             # ViewController (экраны)
+└── Views/                       # Кастомные UI-элементы (ячейки, мини-плеер)
+
+Werhes.Vkz.Core/                 # Общая библиотека
+├── Interfaces/                  # Интерфейсы
+├── Models/                      # Модели данных
+├── VKontakte/                   # VK API клиент
+└── LastFM/                      # Last.fm скробблинг
 ```
 
-## Технические детали
+## Сборка
 
-### VK API
-- Используется VK API версии 5.199
-- На iOS/Android — прямые HTTP-запросы к `api.vk.com/method/`
-- Аутентификация через OAuth 2.0 (Implicit Flow) или `auth.login` с `client_secret`
+### Локальная сборка через PowerShell
 
-### Аудио плеер
-- **iOS**: AVAudioPlayer + AVPlayer
-- **Android**: MediaPlayer (ExoPlayer)
+```powershell
+# Собрать Android
+.\build.ps1 -Platform android -VersionName "1.0.0" -VersionCode 1 -ReleaseType prerelease
 
-### Дизайн
-- Тёмная тема: `#1A1B1E` фон, `#0077FF` акцент, `#232529` поверхности
+# Собрать iOS
+.\build.ps1 -Platform ios -VersionName "1.0.0" -VersionCode 1 -ReleaseType prerelease
+
+# Собрать всё сразу
+.\build.ps1 -Platform both -VersionName "1.0.0" -VersionCode 1 -ReleaseType prerelease
+
+# Собрать с описанием релиза и Telegram уведомлением
+.\build.ps1 -Platform both -VersionName "1.0.0" -VersionCode 1 -ReleaseType release -ReleaseNotes "Исправлены баги, улучшена производительность" -TelegramBotToken "YOUR_BOT_TOKEN" -TelegramChatId "YOUR_CHAT_ID"
+```
+
+**Параметры:**
+| Параметр | Описание |
+|----------|----------|
+| `-Platform` | Платформа: `android`, `ios`, `both` |
+| `-VersionName` | Название версии (например, `1.0.0`) |
+| `-VersionCode` | Код версии (число) |
+| `-ReleaseNotes` | Описание релиза (опционально) |
+| `-ReleaseType` | Тип: `release` или `prerelease` |
+| `-Configuration` | Конфигурация: `Debug` или `Release` |
+| `-TelegramBotToken` | Токен Telegram бота (опционально) |
+| `-TelegramChatId` | ID чата Telegram (опционально) |
+
+### Сборка в Visual Studio
+
+1. Откройте `Werhes.Vkz.sln` в Visual Studio 2022+
+2. Установите необходимые SDK (Xamarin.Android, Xamarin.iOS, .NET Framework)
+3. Выберите конфигурацию **Debug** или **Release**
+4. Соберите нужный проект (Werhes.Vkz.AndroidApp / Werhes.Vkz.iOS)
+
+### Требования
+
+- Visual Studio 2022 с рабочей нагрузкой **Mobile development with .NET (Xamarin)**
+- Android SDK (API 28+)
+- Xcode (для iOS сборки на macOS)
+- .NET Framework 4.7.2+
+
+## Автосборка (GitHub Actions)
+
+При пуше в ветки `main`, `master` или `develop` автоматически запускается сборка Android.
+
+### Ручной запуск сборки
+
+1. Перейдите в **Actions** → **VK Z Full CI/CD**
+2. Нажмите **Run workflow**
+3. Заполните параметры:
+   - **Version name** — название версии
+   - **Version code** — код версии
+   - **Release notes** — описание релиза
+   - **Release type** — `release` или `prerelease`
+   - **Build Android** / **Build iOS** — какие платформы собирать
+
+### Настройка Telegram уведомлений
+
+Для получения уведомлений в Telegram добавьте в **Settings → Secrets and variables → Actions**:
+
+| Secret | Описание |
+|--------|----------|
+| `TELEGRAM_BOT_TOKEN` | Токен вашего Telegram бота (получить у [@BotFather](https://t.me/BotFather)) |
+| `TELEGRAM_CHAT_ID` | ID чата для уведомлений (узнать у [@userinfobot](https://t.me/userinfobot)) |
+
+После настройки при каждой сборке будет приходить уведомление с результатом.
 
 ## Лицензия
 
-MIT License
-
-## Автор
-
-**Werhes** — VK Z Project
+Проект распространяется под лицензией MIT.

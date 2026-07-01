@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginBottom="56dp">
+
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:orientation = "vertical"
+        android:layout_centerHorizontal= "true"
+        android:layout_centerVertical= "true"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+    <TextView
+       android:layout_width="wrap_content"
+        android:textSize="20dp"
+        android:layout_centerHorizontal= "true"
+        android:textStyle="bold"
+        android:textColor="#000"
+       android:text="Р’С‹ РїРѕРїР°Р»Рё РІ РїСѓСЃС‚РѕС‚Сѓ"
+       android:layout_height="wrap_content"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:text="Р’ СЌС‚РѕР№ РІРµСЂСЃРёРё РїСЂРёР»РѕР¶РµРЅРёСЏ С‚Р°РєРѕРіРѕ СЂР°Р·РґРµР»Р° РµС‰Рµ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚"
+        android:layout_centerHorizontal= "true"
+        android:layout_height="wrap_content"/>
+    </LinearLayout>
+   
+
+</RelativeLayout>
+
+

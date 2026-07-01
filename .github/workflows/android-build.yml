@@ -1,136 +1,131 @@
-name: 🤖 Android Build & Release
+name: Android CI/CD
 
 on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Название версии (например, v1.2.0)'
+        description: 'Название версии (например, 1.0.0)'
         required: true
-        default: 'v1.0.0'
-        type: string
+        default: '1.0.0'
+      version_code:
+        description: 'Код версии (число)'
+        required: true
+        default: '1'
       release_notes:
-        description: 'Описание релиза (что нового)'
+        description: 'Описание релиза'
+        required: false
+        default: ''
+      release_type:
+        description: 'Тип релиза'
         required: true
-        default: 'Исправления и улучшения'
-        type: string
-      is_prerelease:
-        description: 'Pre-release (черновик)?'
-        required: true
-        default: true
-        type: boolean
+        default: 'prerelease'
+        type: choice
+        options:
+          - release
+          - prerelease
 
 env:
-  APP_NAME: 'VK-Z'
-  APK_OUTPUT_NAME: 'VK-Z-Universal.apk'
+  DOTNET_VERSION: '6.0.x'
+  ANDROID_CONFIGURATION: 'Release'
+  PROJECT_PATH: 'Werhes.Vkz.AndroidApp/Werhes.Vkz.AndroidApp.csproj'
+  APK_OUTPUT_DIR: 'Werhes.Vkz.AndroidApp/bin/Release'
 
 jobs:
   build-android:
-    name: 🔨 Android APK
-    runs-on: ubuntu-latest
+    name: Build Android APK
+    runs-on: windows-latest
 
     steps:
-      - name: 📥 Checkout репозитория
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: ☕ Установка Java 17
-        uses: actions/setup-java@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: 🏗 Установка Android SDK
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 🔧 Кэширование Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Restore NuGet packages
+        run: nuget restore Werhes.Vkz.sln
 
-      - name: 🏗 Установка Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.5"
+      - name: Build Android project (Release)
+        run: msbuild ${{ env.PROJECT_PATH }} /t:PackageForAndroid /p:Configuration=${{ env.ANDROID_CONFIGURATION }} /p:AndroidPackageFormat=aab /p:VersionName=${{ github.event.inputs.version_name }} /p:VersionCode=${{ github.event.inputs.version_code }}
 
-      - name: 📦 Сборка Universal APK (Debug)
+      - name: Find APK/AAB file
+        id: find_artifact
+        shell: pwsh
         run: |
-          cd android
-          
-          # Устанавливаем core ulimit (необходимо для Gradle)
-          ulimit -c unlimited 2>/dev/null || true
-          echo "core ulimit: $(ulimit -c)"
-          
-          export GRADLE_OPTS="-Dorg.gradle.internal.launcher.welcomeMessageEnabled=false -Dorg.gradle.jvmargs=-Xmx2048m"
-          gradle assembleDebug --no-daemon 2>&1
-        shell: bash
+          $apk = Get-ChildItem -Path "${{ env.APK_OUTPUT_DIR }}" -Recurse -Filter "*.aab" | Select-Object -First 1
+          if (-not $apk) {
+            $apk = Get-ChildItem -Path "${{ env.APK_OUTPUT_DIR }}" -Recurse -Filter "*.apk" | Select-Object -First 1
+          }
+          if ($apk) {
+            echo "artifact_path=$($apk.FullName)" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=$($apk.Name)" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "artifact_path=" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=" >> $env:GITHUB_OUTPUT
+          }
 
-      - name: 📋 Поиск APK
-        id: find_apk
-        run: |
-          APK_PATH=$(find android/app/build/outputs -name "*.apk" -type f | head -1)
-          echo "APK_PATH=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "Найден APK: $APK_PATH"
-
-      - name: 📤 Загрузка APK как артефакта
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APK_OUTPUT_NAME }}
-          path: ${{ steps.find_apk.outputs.APK_PATH }}
-          if-no-files-found: error
+          name: VKZ-Android-${{ github.event.inputs.version_name }}
+          path: ${{ steps.find_artifact.outputs.artifact_path }}
+          if-no-files-found: warn
 
-      - name: 🏷 Создание релиза на GitHub
-        id: create_release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: steps.find_artifact.outputs.artifact_path != ''
         with:
-          tag_name: ${{ github.event.inputs.version_name }}
-          name: '${{ env.APP_NAME }} ${{ github.event.inputs.version_name }}'
-          body: |
-            ## ${{ env.APP_NAME }} ${{ github.event.inputs.version_name }}
+          tag_name: android-v${{ github.event.inputs.version_name }}
+          name: VK Z Android v${{ github.event.inputs.version_name }}
+          body: ${{ github.event.inputs.release_notes }}
+          prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
+          files: |
+            ${{ steps.find_artifact.outputs.artifact_path }}
 
-            ${{ github.event.inputs.release_notes }}
-
-            ---
-            *Собрано: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}*
-          files: ${{ steps.find_apk.outputs.APK_PATH }}
-          prerelease: ${{ github.event.inputs.is_prerelease }}
-          generate_release_notes: false
-
-      - name: 📱 Отправка уведомления в Telegram
+      - name: Send Telegram notification
         if: always()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        shell: pwsh
         run: |
-          VERSION="${{ github.event.inputs.version_name }}"
-          NOTES="${{ github.event.inputs.release_notes }}"
-          PRERELEASE="${{ github.event.inputs.is_prerelease }}"
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/$VERSION"
-
-          if [ "$PRERELEASE" = "true" ]; then
-            STATUS_ICON="🧪"
-            STATUS_TEXT="Pre-release"
-          else
-            STATUS_ICON="✅"
-            STATUS_TEXT="Stable"
-          fi
-
-          MESSAGE="$STATUS_ICON <b>${{ env.APP_NAME }} $VERSION</b> ($STATUS_TEXT) 📱 Android
+          $botToken = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
           
-          📝 <b>Что нового:</b>
-          $NOTES
+          if ([string]::IsNullOrEmpty($botToken) -or [string]::IsNullOrEmpty($chatId)) {
+            Write-Host "Telegram secrets not configured, skipping notification"
+            exit 0
+          }
           
-          🔗 <a href=\"$RELEASE_URL\">Скачать релиз</a>
-          ⚙ <a href=\"$RUN_URL\">Сборка #${{ github.run_number }}</a>"
-
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" \
-            -d "parse_mode=HTML" \
-            -d "disable_web_page_preview=true" || echo "Telegram notification failed"
-        shell: bash
+          $status = "${{ job.status }}"
+          $versionName = "${{ github.event.inputs.version_name }}"
+          $releaseType = "${{ github.event.inputs.release_type }}"
+          $runId = "${{ github.run_id }}"
+          $repoUrl = "${{ github.server_url }}/${{ github.repository }}"
+          
+          $emoji = if ($status -eq "success") { "✅" } else { "❌" }
+          $statusText = if ($status -eq "success") { "SUCCESS" } else { "FAILED" }
+          
+          $message = @"
+          ${emoji} *Android Build VK Z* ${emoji}
+          
+          *Status:* ${statusText}
+          *Version:* ${versionName}
+          *Type:* ${releaseType}
+          *Release:* [GitHub Release](${repoUrl}/releases/tag/android-v${versionName})
+          *Run:* [Actions Run #${runId}](${repoUrl}/actions/runs/${runId})
+          "@
+          
+          $body = @{
+            chat_id = $chatId
+            text = $message
+            parse_mode = "Markdown"
+            disable_web_page_preview = $false
+          } | ConvertTo-Json
+          
+          Invoke-RestMethod -Uri "https://api.telegram.org/bot${botToken}/sendMessage" -Method Post -ContentType "application/json" -Body $body

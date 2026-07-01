@@ -1,0 +1,262 @@
+name: VK Z Full CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Название версии (например, 1.0.0)'
+        required: true
+        default: '1.0.0'
+      version_code:
+        description: 'Код версии (число)'
+        required: true
+        default: '1'
+      release_notes:
+        description: 'Описание релиза'
+        required: false
+        default: ''
+      release_type:
+        description: 'Тип релиза'
+        required: true
+        default: 'prerelease'
+        type: choice
+        options:
+          - release
+          - prerelease
+      build_android:
+        description: 'Собирать Android'
+        required: true
+        default: true
+        type: boolean
+      build_ios:
+        description: 'Собирать iOS'
+        required: true
+        default: true
+        type: boolean
+
+  push:
+    branches: [ "main", "master", "develop" ]
+    paths-ignore:
+      - '**.md'
+      - '.gitattributes'
+      - 'old/**'
+
+  pull_request:
+    branches: [ "main", "master" ]
+    paths-ignore:
+      - '**.md'
+      - '.gitattributes'
+      - 'old/**'
+
+env:
+  DOTNET_VERSION: '6.0.x'
+  CONFIGURATION: 'Release'
+
+jobs:
+  build-android:
+    name: Build Android APK/AAB
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || github.event.inputs.build_android == 'true' }}
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Restore NuGet packages
+        run: nuget restore Werhes.Vkz.sln
+
+      - name: Set version variables
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $versionName = "${{ github.event.inputs.version_name }}"
+            $versionCode = "${{ github.event.inputs.version_code }}"
+            $releaseNotes = "${{ github.event.inputs.release_notes }}"
+            $releaseType = "${{ github.event.inputs.release_type }}"
+          } else {
+            $date = Get-Date -Format "yyyy.MM.dd"
+            $rev = $env:GITHUB_RUN_NUMBER
+            $versionName = "${date}.${rev}"
+            $versionCode = $rev
+            $releaseNotes = "Automated build from ${{ github.ref_name }} branch"
+            $releaseType = "prerelease"
+          }
+          echo "version_name=$versionName" >> $env:GITHUB_OUTPUT
+          echo "version_code=$versionCode" >> $env:GITHUB_OUTPUT
+          echo "release_notes=$releaseNotes" >> $env:GITHUB_OUTPUT
+          echo "release_type=$releaseType" >> $env:GITHUB_OUTPUT
+
+      - name: Build Android project
+        run: msbuild Werhes.Vkz.AndroidApp/Werhes.Vkz.AndroidApp.csproj /t:PackageForAndroid /p:Configuration=${{ env.CONFIGURATION }} /p:AndroidPackageFormat=aab /p:VersionName=${{ steps.version.outputs.version_name }} /p:VersionCode=${{ steps.version.outputs.version_code }}
+
+      - name: Find output file
+        id: find_artifact
+        shell: pwsh
+        run: |
+          $outputDir = "Werhes.Vkz.AndroidApp/bin/${{ env.CONFIGURATION }}"
+          $aab = Get-ChildItem -Path $outputDir -Recurse -Filter "*.aab" | Select-Object -First 1
+          $apk = Get-ChildItem -Path $outputDir -Recurse -Filter "*.apk" | Select-Object -First 1
+          if ($aab) {
+            echo "artifact_path=$($aab.FullName)" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=$($aab.Name)" >> $env:GITHUB_OUTPUT
+            echo "artifact_ext=aab" >> $env:GITHUB_OUTPUT
+          } elseif ($apk) {
+            echo "artifact_path=$($apk.FullName)" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=$($apk.Name)" >> $env:GITHUB_OUTPUT
+            echo "artifact_ext=apk" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "artifact_path=" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=" >> $env:GITHUB_OUTPUT
+            echo "artifact_ext=" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VKZ-Android-v${{ steps.version.outputs.version_name }}
+          path: ${{ steps.find_artifact.outputs.artifact_path }}
+          if-no-files-found: warn
+
+      - name: Create Android GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'workflow_dispatch' && steps.find_artifact.outputs.artifact_path != ''
+        with:
+          tag_name: android-v${{ steps.version.outputs.version_name }}
+          name: VK Z Android v${{ steps.version.outputs.version_name }}
+          body: ${{ steps.version.outputs.release_notes }}
+          prerelease: ${{ steps.version.outputs.release_type == 'prerelease' }}
+          files: |
+            ${{ steps.find_artifact.outputs.artifact_path }}
+
+  build-ios:
+    name: Build iOS IPA
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_ios == 'true' }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet packages
+        run: nuget restore Werhes.Vkz.sln
+
+      - name: Set version variables
+        id: version
+        shell: pwsh
+        run: |
+          $versionName = "${{ github.event.inputs.version_name }}"
+          $versionCode = "${{ github.event.inputs.version_code }}"
+          $releaseNotes = "${{ github.event.inputs.release_notes }}"
+          $releaseType = "${{ github.event.inputs.release_type }}"
+          echo "version_name=$versionName" >> $env:GITHUB_OUTPUT
+          echo "version_code=$versionCode" >> $env:GITHUB_OUTPUT
+          echo "release_notes=$releaseNotes" >> $env:GITHUB_OUTPUT
+          echo "release_type=$releaseType" >> $env:GITHUB_OUTPUT
+
+      - name: Build iOS project
+        run: msbuild Werhes.Vkz.iOS/Werhes.Vkz.iOS.csproj /p:Configuration=${{ env.CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ steps.version.outputs.version_name }} /p:VersionCode=${{ steps.version.outputs.version_code }}
+
+      - name: Find IPA file
+        id: find_artifact
+        shell: pwsh
+        run: |
+          $outputDir = "Werhes.Vkz.iOS/bin/iPhone/${{ env.CONFIGURATION }}"
+          $ipa = Get-ChildItem -Path $outputDir -Recurse -Filter "*.ipa" | Select-Object -First 1
+          if ($ipa) {
+            echo "artifact_path=$($ipa.FullName)" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=$($ipa.Name)" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "artifact_path=" >> $env:GITHUB_OUTPUT
+            echo "artifact_name=" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VKZ-iOS-v${{ steps.version.outputs.version_name }}
+          path: ${{ steps.find_artifact.outputs.artifact_path }}
+          if-no-files-found: warn
+
+      - name: Create iOS GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: steps.find_artifact.outputs.artifact_path != ''
+        with:
+          tag_name: ios-v${{ steps.version.outputs.version_name }}
+          name: VK Z iOS v${{ steps.version.outputs.version_name }}
+          body: ${{ steps.version.outputs.release_notes }}
+          prerelease: ${{ steps.version.outputs.release_type == 'prerelease' }}
+          files: |
+            ${{ steps.find_artifact.outputs.artifact_path }}
+
+  notify:
+    name: Send Telegram Notification
+    needs: [build-android, build-ios]
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send notification to Telegram
+        shell: pwsh
+        run: |
+          $botToken = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          
+          if ([string]::IsNullOrEmpty($botToken) -or [string]::IsNullOrEmpty($chatId)) {
+            Write-Host "Telegram secrets not configured, skipping notification"
+            exit 0
+          }
+          
+          $androidStatus = "${{ needs.build-android.result }}"
+          $iosStatus = "${{ needs.build-ios.result }}"
+          $versionName = "${{ github.event.inputs.version_name }}"
+          $releaseType = "${{ github.event.inputs.release_type }}"
+          $releaseNotes = "${{ github.event.inputs.release_notes }}"
+          $runId = "${{ github.run_id }}"
+          $repoUrl = "${{ github.server_url }}/${{ github.repository }}"
+          
+          $androidEmoji = if ($androidStatus -eq "success") { "✅" } else { "❌" }
+          $iosEmoji = if ($iosStatus -eq "success") { "✅" } else { "❌" }
+          
+          $androidText = if ("${{ github.event.inputs.build_android }}" -eq "true") { "${androidEmoji} Android: ${androidStatus}" } else { "⏭️ Android: skipped" }
+          $iosText = if ("${{ github.event.inputs.build_ios }}" -eq "true") { "${iosEmoji} iOS: ${iosStatus}" } else { "⏭️ iOS: skipped" }
+          
+          $notesBlock = if ([string]::IsNullOrEmpty($releaseNotes)) { "" } else { "`n*Notes:* ${releaseNotes}" }
+          
+          $message = @"
+          🚀 *VK Z Build v${versionName}* 🚀
+          
+          ${androidText}
+          ${iosText}
+          
+          *Version:* ${versionName}
+          *Type:* ${releaseType}${notesBlock}
+          *Run:* [Actions Run #${runId}](${repoUrl}/actions/runs/${runId})
+          *Android Release:* [Download](${repoUrl}/releases/tag/android-v${versionName})
+          *iOS Release:* [Download](${repoUrl}/releases/tag/ios-v${versionName})
+          "@
+          
+          $body = @{
+            chat_id = $chatId
+            text = $message
+            parse_mode = "Markdown"
+            disable_web_page_preview = $false
+          } | ConvertTo-Json
+          
+          Invoke-RestMethod -Uri "https://api.telegram.org/bot${botToken}/sendMessage" -Method Post -ContentType "application/json" -Body $body
