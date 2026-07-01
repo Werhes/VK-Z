@@ -1,7 +1,10 @@
 package com.werhes.vkz.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -64,12 +67,12 @@ object VKColors {
 }
 
 // MARK: - Custom Shapes
-object VKShapes {
-    val small = RoundedCornerShape(8.dp)
-    val medium = RoundedCornerShape(12.dp)
-    val large = RoundedCornerShape(16.dp)
-    val extraLarge = RoundedCornerShape(20.dp)
-}
+val VKShapes = Shapes(
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(20.dp)
+)
 
 private val DarkColorScheme = darkColorScheme(
     primary = VKColors.accentBlue,
