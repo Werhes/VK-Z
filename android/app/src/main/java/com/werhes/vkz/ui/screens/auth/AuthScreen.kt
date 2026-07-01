@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -165,11 +166,16 @@ fun AuthScreen() {
                         containerColor = Color.Transparent,
                         contentColor = Color.White,
                         indicator = { tabPositions ->
-                            TabRowDefaults.Indicator(
-                                modifier = Modifier.tabIndicatorOffset(tabPositions[authMode]),
-                                height = 3.dp,
-                                color = VKColors.accentBlue
-                            )
+                            if (authMode < tabPositions.size) {
+                                Box(
+                                    modifier = Modifier
+                                        .offset(x = with(LocalDensity.current) { tabPositions[authMode].left.toDp() })
+                                        .width(with(LocalDensity.current) { (tabPositions[authMode].right - tabPositions[authMode].left).toDp() })
+                                        .padding(horizontal = 8.dp)
+                                        .height(3.dp)
+                                        .background(VKColors.accentBlue, RoundedCornerShape(1.5.dp))
+                                )
+                            }
                         },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
