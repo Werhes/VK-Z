@@ -107,7 +107,7 @@ jobs:
           echo "release_type=$releaseType" >> $env:GITHUB_OUTPUT
 
       - name: Build Android project
-        run: msbuild Werhes.Vkz.AndroidApp/Werhes.Vkz.AndroidApp.csproj /t:PackageForAndroid /p:Configuration=${{ env.CONFIGURATION }} /p:AndroidPackageFormat=aab /p:VersionName=${{ steps.version.outputs.version_name }} /p:VersionCode=${{ steps.version.outputs.version_code }}
+        run: msbuild Werhes.Vkz.AndroidApp/Werhes.Vkz.AndroidApp.csproj /t:PackageForAndroid /p:Configuration=${{ env.CONFIGURATION }} /p:AndroidPackageFormat=aab "/p:VersionName=${{ steps.version.outputs.version_name }}" /p:VersionCode=${{ steps.version.outputs.version_code }}
 
       - name: Find output file
         id: find_artifact
@@ -188,7 +188,7 @@ jobs:
 
       - name: Build iOS project
         run: |
-          msbuild Werhes.Vkz.iOS/Werhes.Vkz.iOS.csproj /p:Configuration=${{ env.CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ steps.version.outputs.version_name }} /p:VersionCode=${{ steps.version.outputs.version_code }}
+          msbuild Werhes.Vkz.iOS/Werhes.Vkz.iOS.csproj /p:Configuration=${{ env.CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true "/p:VersionNumber=${{ steps.version.outputs.version_name }}" /p:VersionCode=${{ steps.version.outputs.version_code }}
 
       - name: Find IPA file
         id: find_artifact

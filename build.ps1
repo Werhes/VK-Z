@@ -139,7 +139,7 @@ function Build-Android {
     # Build project
     Write-Color "[2/3] Building Android project..." -Color Yellow
     Write-Color "  MSBuild: $msbuild" -Color Gray
-    & $msbuild $projectPath /t:PackageForAndroid /p:Configuration=$Configuration /p:AndroidPackageFormat=aab /p:VersionName=$VersionName /p:VersionCode=$VersionCode
+    & $msbuild $projectPath /t:PackageForAndroid /p:Configuration=$Configuration /p:AndroidPackageFormat=aab "/p:VersionName=$VersionName" /p:VersionCode=$VersionCode
     if ($LASTEXITCODE -ne 0) {
         Write-Color "[ERROR] Android build failed!" -Color Red
         return $false
@@ -185,7 +185,7 @@ function Build-iOS {
     # Build project
     Write-Color "[2/3] Building iOS project..." -Color Yellow
     Write-Color "  MSBuild: $msbuild" -Color Gray
-    & $msbuild $projectPath /p:Configuration=$Configuration /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=$VersionName /p:VersionCode=$VersionCode
+    & $msbuild $projectPath /p:Configuration=$Configuration /p:Platform=iPhone /p:BuildIpa=true "/p:VersionNumber=$VersionName" /p:VersionCode=$VersionCode
     if ($LASTEXITCODE -ne 0) {
         Write-Color "[ERROR] iOS build failed!" -Color Red
         return $false

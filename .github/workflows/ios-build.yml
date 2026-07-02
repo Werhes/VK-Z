@@ -56,7 +56,7 @@ jobs:
 
       - name: Build iOS project (Release for iPhone)
         run: |
-          msbuild ${{ env.PROJECT_PATH }} /p:Configuration=${{ env.IOS_CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true /p:VersionNumber=${{ github.event.inputs.version_name }} /p:VersionCode=${{ github.event.inputs.version_code }}
+          msbuild ${{ env.PROJECT_PATH }} /p:Configuration=${{ env.IOS_CONFIGURATION }} /p:Platform=iPhone /p:BuildIpa=true "/p:VersionNumber=${{ github.event.inputs.version_name }}" /p:VersionCode=${{ github.event.inputs.version_code }}
 
       - name: Find IPA file
         id: find_artifact
