@@ -46,6 +46,8 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: '[17,18)'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -53,7 +55,7 @@ jobs:
       - name: Install Xamarin Android workload
         shell: pwsh
         run: |
-          dotnet workload install android 2>$null
+          dotnet workload install maui-android 2>$null
           if ($LASTEXITCODE -ne 0) {
             Write-Host "Android workload install failed (non-critical), continuing..."
           }
