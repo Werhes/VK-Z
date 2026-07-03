@@ -46,8 +46,6 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
-        with:
-          vs-version: '[17,18)'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -99,43 +97,3 @@ jobs:
           prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
           files: |
             ${{ steps.find_artifact.outputs.artifact_path }}
-
-      - name: Send Telegram notification
-        if: always()
-        shell: pwsh
-        run: |
-          $botToken = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          
-          if ([string]::IsNullOrEmpty($botToken) -or [string]::IsNullOrEmpty($chatId)) {
-            Write-Host "Telegram secrets not configured, skipping notification"
-            exit 0
-          }
-          
-          $status = "${{ job.status }}"
-          $versionName = "${{ github.event.inputs.version_name }}"
-          $releaseType = "${{ github.event.inputs.release_type }}"
-          $runId = "${{ github.run_id }}"
-          $repoUrl = "${{ github.server_url }}/${{ github.repository }}"
-          
-          $emoji = if ($status -eq "success") { "✅" } else { "❌" }
-          $statusText = if ($status -eq "success") { "SUCCESS" } else { "FAILED" }
-          
-          $message = @"
-          ${emoji} *Android Build VK Z* ${emoji}
-          
-          *Status:* ${statusText}
-          *Version:* ${versionName}
-          *Type:* ${releaseType}
-          *Release:* [GitHub Release](${repoUrl}/releases/tag/android-v${versionName})
-          *Run:* [Actions Run #${runId}](${repoUrl}/actions/runs/${runId})
-          "@
-          
-          $body = @{
-            chat_id = $chatId
-            text = $message
-            parse_mode = "Markdown"
-            disable_web_page_preview = $false
-          } | ConvertTo-Json
-          
-          Invoke-RestMethod -Uri "https://api.telegram.org/bot${botToken}/sendMessage" -Method Post -ContentType "application/json" -Body $body
